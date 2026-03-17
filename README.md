@@ -47,10 +47,24 @@ export FEISHU_APP_SECRET='***'
 
 ### 4)（可选）OAuth 登录（仅 user mode）
 
+本地（推荐，自动起一个本地回调监听）：
+
 ```bash
 # 默认监听 127.0.0.1:18900/callback
 feishu-sync auth login
 ```
+
+远程/手动（推荐在服务器上用；需要你在开放平台里配置一个 **whitelisted redirect_uri**）：
+
+```bash
+feishu-sync auth login --remote --redirect-uri <WHITELISTED_REDIRECT_URI>
+```
+
+运行后会打印授权 URL。完成授权后，把浏览器跳转后的 **完整回调 URL（包含 ?code=...&state=...）** 粘贴回终端。
+
+注意：
+- 如果你粘贴的是完整 URL，则必须包含并匹配 `state`（用于防止 CSRF）。
+- 如果你只粘贴 raw code（不含 state），会给出警告并继续（无法校验 state）。
 
 ### 5) 拉取备份
 

@@ -73,6 +73,9 @@ func Run(args []string) int {
 		chdir := fs.String("C", "", "run as if started in this directory")
 		configPath := fs.String("c", "", "explicit config file path (advanced)")
 		noBrowser := fs.Bool("no-browser", false, "do not auto-open the browser")
+		remote := fs.Bool("remote", false, "remote/manual auth flow (no local callback server)")
+		manual := fs.Bool("manual", false, "alias for --remote")
+		redirectURI := fs.String("redirect-uri", "", "override redirect_uri for remote/manual mode (must be whitelisted in Feishu app)")
 		host := fs.String("host", "127.0.0.1", "callback listen host")
 		port := fs.Int("port", 18900, "callback listen port")
 		callbackPath := fs.String("callback-path", "/callback", "callback path")
@@ -86,7 +89,7 @@ func Run(args []string) int {
 		sub := fs.Arg(0)
 		switch sub {
 		case "login":
-			if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{ListenHost: *host, Port: *port, CallbackPath: *callbackPath, NoBrowser: *noBrowser}, os.Stdout, os.Stderr); err != nil {
+			if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{ListenHost: *host, Port: *port, CallbackPath: *callbackPath, NoBrowser: *noBrowser, Remote: *remote || *manual, RedirectURI: *redirectURI}, os.Stdout, os.Stderr); err != nil {
 				fmt.Fprintln(os.Stderr, "FAIL:", err)
 				return 1
 			}

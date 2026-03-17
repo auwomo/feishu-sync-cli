@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+	"strings"
 
 	"github.com/your-org/feishu-sync/internal/auth"
 	"github.com/your-org/feishu-sync/internal/feishu"
@@ -22,6 +23,9 @@ type authLoginOptions struct {
 	CallbackPath string
 	Timeout      time.Duration
 	NoBrowser    bool
+
+	Remote      bool
+	RedirectURI string
 }
 
 func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginOptions, out io.Writer, errOut io.Writer) error {
@@ -38,15 +42,12 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 	port := opts.Port
 	callbackPath := opts.CallbackPath
 
-	listenHost = opts.ListenHost
 	if listenHost == "" {
 		listenHost = "127.0.0.1"
 	}
-	port = opts.Port
 	if port == 0 {
 		port = 18900
 	}
-	callbackPath = opts.CallbackPath
 	if callbackPath == "" {
 		callbackPath = "/callback"
 	}
@@ -54,13 +55,13 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 		callbackPath = "/" + callbackPath
 	}
 
-	addr := fmt.Sprintf("%s:%d", listenHost, port)
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return fmt.Errorf("cannot listen on %s: %w (port may be in use; try --port %d)", addr, err, port+1)
+	redirectURI := opts.RedirectURI
+	if redirectURI == "" {
+		redirectURI = authLoginRedirectURI(listenHost, port, callbackPath)
+		if opts.Remote {
+			fmt.Fprintln(out, "WARNING: --remote used without --redirect-uri; using local callback redirect (likely not whitelisted):", redirectURI)
+		}
 	}
-	defer ln.Close()
-	redirectURI := authLoginRedirectURI(listenHost, port, callbackPath)
 
 	state := feishu.RandomState()
 	authURL, err := feishu.OAuthAuthorizeURL(cfg.App.ID, redirectURI, state)
@@ -68,58 +69,104 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 		return err
 	}
 
-	codeCh := make(chan string, 1)
-	errCh := make(chan error, 1)
-
-	mux := http.NewServeMux()
-	mux.HandleFunc(callbackPath, func(w http.ResponseWriter, r *http.Request) {
-		code, st, err := feishu.ParseOAuthCallback(r)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte("Auth failed: " + err.Error()))
-			errCh <- err
-			return
-		}
-		if st != state {
-			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte("Auth failed: invalid state"))
-			errCh <- errors.New("invalid oauth state")
-			return
-		}
-		_, _ = w.Write([]byte("OK. You can close this tab and return to the terminal."))
-		codeCh <- code
-	})
-
-	srv := &http.Server{Handler: mux}
-	go func() {
-		_ = srv.Serve(ln)
-	}()
-
-	fmt.Fprintln(out, "Open this URL to authorize:")
-	fmt.Fprintln(out, authURL)
-
-	if !opts.NoBrowser {
-		_ = openBrowser(authURL)
-	}
-
-	timeout := opts.Timeout
-	if timeout <= 0 {
-		timeout = 2 * time.Minute
-	}
-	ctx2, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	fmt.Fprintln(out, "Auth login:")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Local callback (recommended on your laptop):")
+	fmt.Fprintf(out, "  feishu-sync auth login --host %s --port %d --callback-path %s\n", listenHost, port, callbackPath)
+	fmt.Fprintf(out, "  redirect_uri: %s\n", authLoginRedirectURI(listenHost, port, callbackPath))
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Remote/manual (recommended on a server):")
+	fmt.Fprintln(out, "  feishu-sync auth login --remote --redirect-uri <WHITELISTED_REDIRECT_URI>")
+	fmt.Fprintf(out, "  redirect_uri currently used: %s\n", redirectURI)
+	fmt.Fprintln(out)
 
 	var code string
-	select {
-	case code = <-codeCh:
-	case err := <-errCh:
+	if opts.Remote {
+		fmt.Fprintln(out, "Open this URL to authorize:")
+		fmt.Fprintln(out, authURL)
+		if !opts.NoBrowser {
+			_ = openBrowser(authURL)
+		}
+		fmt.Fprintln(out)
+		fmt.Fprintln(out, "Paste the full callback URL (containing ?code=...) OR paste just the code:")
+		input, err := readLine(ctx, "")
+		if err != nil {
+			return err
+		}
+		c, st, err := parseOAuthPastedInput(input)
+		if err != nil {
+			return err
+		}
+		if st != "" {
+			if st != state {
+				return errors.New("invalid oauth state")
+			}
+		} else if strings.Contains(strings.TrimSpace(input), "://") {
+			return errors.New("callback url missing state")
+		} else {
+			fmt.Fprintln(out, "WARNING: no state provided (raw code pasted); cannot validate state")
+		}
+		code = c
+	} else {
+		addr := fmt.Sprintf("%s:%d", listenHost, port)
+		ln, err := net.Listen("tcp", addr)
+		if err != nil {
+			return fmt.Errorf("cannot listen on %s: %w (port may be in use; try --port %d)", addr, err, port+1)
+		}
+		defer ln.Close()
+
+		codeCh := make(chan string, 1)
+		errCh := make(chan error, 1)
+
+		mux := http.NewServeMux()
+		mux.HandleFunc(callbackPath, func(w http.ResponseWriter, r *http.Request) {
+			code, st, err := feishu.ParseOAuthCallback(r)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte("Auth failed: " + err.Error()))
+				errCh <- err
+				return
+			}
+			if st != state {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte("Auth failed: invalid state"))
+				errCh <- errors.New("invalid oauth state")
+				return
+			}
+			_, _ = w.Write([]byte("OK. You can close this tab and return to the terminal."))
+			codeCh <- code
+		})
+
+		srv := &http.Server{Handler: mux}
+		go func() {
+			_ = srv.Serve(ln)
+		}()
+
+		fmt.Fprintln(out, "Open this URL to authorize:")
+		fmt.Fprintln(out, authURL)
+
+		if !opts.NoBrowser {
+			_ = openBrowser(authURL)
+		}
+
+		timeout := opts.Timeout
+		if timeout <= 0 {
+			timeout = 2 * time.Minute
+		}
+		ctx2, cancel := context.WithTimeout(ctx, timeout)
+		defer cancel()
+
+		select {
+		case code = <-codeCh:
+		case err := <-errCh:
+			_ = srv.Shutdown(context.Background())
+			return err
+		case <-ctx2.Done():
+			_ = srv.Shutdown(context.Background())
+			return fmt.Errorf("auth timeout after %s", timeout)
+		}
 		_ = srv.Shutdown(context.Background())
-		return err
-	case <-ctx2.Done():
-		_ = srv.Shutdown(context.Background())
-		return fmt.Errorf("auth timeout after %s", timeout)
 	}
-	_ = srv.Shutdown(context.Background())
 
 	client := feishuNewClient()
 	tenantTok, err := client.TenantAccessToken(ctx, cfg.App.ID, secret)
