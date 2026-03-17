@@ -79,7 +79,6 @@ type WikiNodesResp struct {
 
 func (c *Client) WikiSpaceNodes(ctx context.Context, accessToken, spaceID, parentNodeToken, pageToken string) (*WikiNodesResp, error) {
   q := url.Values{}
-  q.Set("space_id", spaceID)
   q.Set("page_size", "50")
   if parentNodeToken != "" {
     q.Set("parent_node_token", parentNodeToken)
@@ -87,7 +86,9 @@ func (c *Client) WikiSpaceNodes(ctx context.Context, accessToken, spaceID, paren
   if pageToken != "" {
     q.Set("page_token", pageToken)
   }
-  req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/open-apis/wiki/v2/space/get_node_list?"+q.Encode(), nil)
+
+  // feishu-backup uses: /wiki/v2/spaces/{space_id}/nodes
+  req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/open-apis/wiki/v2/spaces/"+url.PathEscape(spaceID)+"/nodes?"+q.Encode(), nil)
   if err != nil {
     return nil, err
   }
