@@ -203,6 +203,6 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "feishu-sync <command> [args]")
 	fmt.Fprintln(os.Stderr, "commands: init, secret, auth, pull, drive, wiki, validate")
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "drive subcommands: roots, ls
-wiki subcommands: ls")
+	fmt.Fprintln(os.Stderr, "drive subcommands: roots, ls")
+	fmt.Fprintln(os.Stderr, "wiki subcommands: ls")
 }
