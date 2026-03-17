@@ -9,7 +9,6 @@ import (
 
 	"github.com/your-org/feishu-sync/internal/config"
 	"github.com/your-org/feishu-sync/internal/discovery"
-	"github.com/your-org/feishu-sync/internal/feishu"
 	"github.com/your-org/feishu-sync/internal/manifest"
 	"github.com/your-org/feishu-sync/internal/workspace"
 )
