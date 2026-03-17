@@ -10,12 +10,21 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/your-org/feishu-sync/internal/auth"
 	"github.com/your-org/feishu-sync/internal/feishu"
 )
+
+// netListen is overridden in tests.
+var netListen = net.Listen
+
+// listener is the minimal interface we need from net.Listener.
+type listener interface {
+	Close() error
+	Addr() net.Addr
+}
 
 type authLoginOptions struct {
 	ListenHost   string
@@ -58,23 +67,23 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 
 	localRedirectURI := authLoginRedirectURI(listenHost, port, callbackPath)
 
-	redirectURI := opts.RedirectURI
-	if redirectURI == "" {
-		redirectURI = localRedirectURI
-		if opts.Remote {
-			st := newTermStyle(out)
-			fmt.Fprintln(out, st.warn("WARNING: --remote used without --redirect-uri; using local callback redirect (likely not whitelisted): ")+redirectURI)
-		}
+	effectiveRedirectURI := localRedirectURI
+	if opts.RedirectURI != "" {
+		// Allow overriding redirect_uri in both local and remote modes.
+		effectiveRedirectURI = opts.RedirectURI
+	} else if opts.Remote {
+		st := newTermStyle(out)
+		fmt.Fprintln(out, st.warn("WARNING: --remote used without --redirect-uri; using local callback redirect (likely not whitelisted): ")+effectiveRedirectURI)
 	}
 
 	state := feishu.RandomState()
-	authURL, err := feishu.OAuthAuthorizeURL(cfg.App.ID, redirectURI, state)
+	authURL, err := feishu.OAuthAuthorizeURL(cfg.App.ID, effectiveRedirectURI, state)
 	if err != nil {
 		return err
 	}
 
 	// Print concise, two-option guidance.
-	printAuthLoginOptions(out, opts, authURL, redirectURI, localRedirectURI)
+	printAuthLoginOptions(out, opts, authURL, effectiveRedirectURI, localRedirectURI)
 
 	var code string
 	if opts.Remote {
@@ -113,7 +122,7 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 		code = oauthCode
 	} else {
 		addr := fmt.Sprintf("%s:%d", listenHost, port)
-		ln, err := net.Listen("tcp", addr)
+		ln, err := netListen("tcp", addr)
 		if err != nil {
 			return fmt.Errorf("cannot listen on %s: %w (port may be in use; try --port %d)", addr, err, port+1)
 		}
