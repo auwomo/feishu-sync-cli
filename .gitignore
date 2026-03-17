@@ -1,0 +1,9 @@
+# workspace secrets/state
+.feishu-sync/token.json
+.feishu-sync/state.json
+
+# default output
+backup/
+
+# logs
+.feishu-sync/logs/
