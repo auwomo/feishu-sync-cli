@@ -17,11 +17,11 @@ import (
 )
 
 type authLoginOptions struct {
-	ListenHost    string
-	Port          int
-	CallbackPath  string
-	Timeout       time.Duration
-	NoBrowser     bool
+	ListenHost   string
+	Port         int
+	CallbackPath string
+	Timeout      time.Duration
+	NoBrowser    bool
 }
 
 func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginOptions, out io.Writer) error {

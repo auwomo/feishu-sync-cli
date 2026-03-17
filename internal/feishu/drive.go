@@ -19,8 +19,8 @@ type DriveFolderChildrenResponse struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
 	Data struct {
-		HasMore   bool                     `json:"has_more"`
-		PageToken string                   `json:"page_token"`
+		HasMore   bool                      `json:"has_more"`
+		PageToken string                    `json:"page_token"`
 		Files     []DriveFolderChildrenItem `json:"files"`
 	} `json:"data"`
 }

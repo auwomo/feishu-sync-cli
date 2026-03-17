@@ -27,7 +27,13 @@ feishu-sync auth login --port 18900
 feishu-sync drive roots
 feishu-sync drive ls --folder <folder_token> --depth 2
 
-# 5) pull (sync)
+# 5) pull (backup)
+# Dry-run prints the manifest (discovery only)
+feishu-sync pull --dry-run
+
+# Real backup exports files into ./backup/drive/... and writes meta files:
+#   backup/_meta/manifest.json
+#   backup/_meta/errors-YYYYMMDD.jsonl
 feishu-sync pull
 ```
 
@@ -69,7 +75,7 @@ Then run (ensure your Feishu app has redirect URL `http://127.0.0.1:18900/callba
 feishu-sync auth login --port 18900
 ```
 
-In user mode, if `scope.drive_folder_tokens` is empty, `pull --dry-run` will auto-discover the current user's Drive root folder.
+In user mode, if `scope.drive_folder_tokens` is empty, `pull` / `pull --dry-run` will auto-discover the current user's Drive root folder.
 
 ## Security
 

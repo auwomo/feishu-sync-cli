@@ -4,6 +4,8 @@ type DriveItem struct {
 	Token string `json:"token"`
 	Name  string `json:"name"`
 	Type  string `json:"type"`
+	// Path is the relative path under the discovered root folder, including this item's name.
+	Path string `json:"path"`
 }
 
 type DiscoveryError struct {

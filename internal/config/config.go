@@ -22,14 +22,20 @@ type Config struct {
 	} `yaml:"auth"`
 
 	Scope struct {
-		Mode             string   `yaml:"mode"`
+		Mode              string   `yaml:"mode"`
 		DriveFolderTokens []string `yaml:"drive_folder_tokens"`
-		WikiSpaceIDs     []string `yaml:"wiki_space_ids"`
+		WikiSpaceIDs      []string `yaml:"wiki_space_ids"`
 	} `yaml:"scope"`
 
 	Output struct {
 		Dir string `yaml:"dir"`
 	} `yaml:"output"`
+
+	Runtime struct {
+		Concurrency  int  `yaml:"concurrency"`
+		RateLimitQPS int  `yaml:"rate_limit_qps"`
+		Incremental  bool `yaml:"incremental"`
+	} `yaml:"runtime"`
 }
 
 func Load(path string) (*Config, error) {
