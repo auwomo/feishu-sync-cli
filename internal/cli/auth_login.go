@@ -122,7 +122,11 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 	_ = srv.Shutdown(context.Background())
 
 	client := feishuNewClient()
-	r, err := client.ExchangeUserCode(ctx, cfg.App.ID, secret, code, redirectURI)
+	tenantTok, err := client.TenantAccessToken(ctx, cfg.App.ID, secret)
+	if err != nil {
+		return err
+	}
+	r, err := client.ExchangeUserCode(ctx, tenantTok, code)
 	if err != nil {
 		return err
 	}

@@ -35,7 +35,11 @@ func (p *UserTokenProvider) AccessToken(ctx context.Context) (string, error) {
 	if t.RefreshToken == "" {
 		return "", errors.New("user token expired and refresh_token missing (run `feishu-sync auth login`) ")
 	}
-	r, err := p.Client.RefreshUserToken(ctx, p.AppID, p.AppSecret, t.RefreshToken)
+	tenantTok, err := p.Client.TenantAccessToken(ctx, p.AppID, p.AppSecret)
+	if err != nil {
+		return "", err
+	}
+	r, err := p.Client.RefreshUserToken(ctx, tenantTok, t.RefreshToken)
 	if err != nil {
 		return "", err
 	}

@@ -84,20 +84,20 @@ func OAuthAuthorizeURL(appID, redirectURI, state string) (string, error) {
 	return u.String(), nil
 }
 
-func (c *Client) ExchangeUserCode(ctx context.Context, appID, appSecret, code, redirectURI string) (*UserAccessTokenResponse, error) {
+func (c *Client) ExchangeUserCode(ctx context.Context, tenantAccessToken, code string) (*UserAccessTokenResponse, error) {
 	body, _ := json.Marshal(map[string]string{
-		"app_id":       appID,
-		"app_secret":   appSecret,
-		"grant_type":   "authorization_code",
-		"code":         code,
-		"redirect_uri": redirectURI,
+		"grant_type": "authorization_code",
+		"code":       code,
 	})
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/open-apis/authen/v2/oauth/token", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/open-apis/authen/v1/access_token", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	if tenantAccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+tenantAccessToken)
+	}
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -124,18 +124,19 @@ func (c *Client) ExchangeUserCode(ctx context.Context, appID, appSecret, code, r
 	return &tr, nil
 }
 
-func (c *Client) RefreshUserToken(ctx context.Context, appID, appSecret, refreshToken string) (*UserRefreshTokenResponse, error) {
+func (c *Client) RefreshUserToken(ctx context.Context, tenantAccessToken, refreshToken string) (*UserRefreshTokenResponse, error) {
 	body, _ := json.Marshal(map[string]string{
-		"app_id":     appID,
-		"app_secret": appSecret,
-		"grant_type": "refresh_token",
+		"grant_type":    "refresh_token",
 		"refresh_token": refreshToken,
 	})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/open-apis/authen/v2/oauth/token", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/open-apis/authen/v1/refresh_access_token", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	if tenantAccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+tenantAccessToken)
+	}
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -169,7 +170,7 @@ func ExpiresAt(now time.Time, expiresIn int) time.Time {
 func ParseOAuthCallback(r *http.Request) (code string, state string, err error) {
 	q := r.URL.Query()
 	code = q.Get("code")
-	state = q.Get("state")	
+	state = q.Get("state")
 	if code == "" {
 		// sometimes error params are present
 		errDesc := q.Get("error_description")
