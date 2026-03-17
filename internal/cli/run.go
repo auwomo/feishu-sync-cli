@@ -68,7 +68,9 @@ func Run(args []string) int {
 		chdir := fs.String("C", "", "run as if started in this directory")
 		configPath := fs.String("c", "", "explicit config file path (advanced)")
 		noBrowser := fs.Bool("no-browser", false, "do not auto-open the browser")
-		port := fs.Int("port", 0, "callback listen port (0=random)")
+		host := fs.String("host", "127.0.0.1", "callback listen host")
+		port := fs.Int("port", 18900, "callback listen port")
+		callbackPath := fs.String("callback-path", "/callback", "callback path")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}
@@ -79,7 +81,7 @@ func Run(args []string) int {
 		sub := fs.Arg(0)
 		switch sub {
 		case "login":
-			if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{Port: *port, NoBrowser: *noBrowser}, os.Stdout); err != nil {
+			if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{ListenHost: *host, Port: *port, CallbackPath: *callbackPath, NoBrowser: *noBrowser}, os.Stdout); err != nil {
 				fmt.Fprintln(os.Stderr, "FAIL:", err)
 				return 1
 			}

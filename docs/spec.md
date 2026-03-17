@@ -9,6 +9,19 @@
 
 ## Commands
 
+### `feishu-sync auth login`
+
+User-mode OAuth login.
+
+Options:
+- `--host <ip>`: callback listen host (default `127.0.0.1`)
+- `--port <int>`: callback listen port (default `18900`)
+- `--callback-path <path>`: callback path (default `/callback`)
+
+Setup:
+- Add redirect URL `http://127.0.0.1:18900/callback` to your Feishu app.
+- Run: `feishu-sync auth login --port 18900`
+
 ### `feishu-sync init`
 
 Creates `.feishu-sync/` in the target directory and writes a config template.

@@ -20,7 +20,8 @@ printf '%s' '***' | feishu-sync secret set
 # If using user mode:
 #   - set auth.mode: user in .feishu-sync/config.yaml
 #   - login once (opens browser)
-feishu-sync auth login
+#     Note: add redirect URL `http://127.0.0.1:18900/callback` in Feishu app settings.
+feishu-sync auth login --port 18900
 
 # 4) explore Drive folders
 feishu-sync drive roots
@@ -62,10 +63,10 @@ auth:
   mode: user
 ```
 
-Then run:
+Then run (ensure your Feishu app has redirect URL `http://127.0.0.1:18900/callback`):
 
 ```bash
-feishu-sync auth login
+feishu-sync auth login --port 18900
 ```
 
 In user mode, if `scope.drive_folder_tokens` is empty, `pull --dry-run` will auto-discover the current user's Drive root folder.

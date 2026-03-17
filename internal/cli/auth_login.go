@@ -17,10 +17,11 @@ import (
 )
 
 type authLoginOptions struct {
-	ListenHost string
-	Port       int // 0 means random
-	Timeout    time.Duration
-	NoBrowser  bool
+	ListenHost    string
+	Port          int
+	CallbackPath  string
+	Timeout       time.Duration
+	NoBrowser     bool
 }
 
 func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginOptions, out io.Writer) error {
@@ -34,16 +35,32 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 	}
 
 	listenHost := opts.ListenHost
+	port := opts.Port
+	callbackPath := opts.CallbackPath
+
+	listenHost = opts.ListenHost
 	if listenHost == "" {
 		listenHost = "127.0.0.1"
 	}
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", listenHost, opts.Port))
+	port = opts.Port
+	if port == 0 {
+		port = 18900
+	}
+	callbackPath = opts.CallbackPath
+	if callbackPath == "" {
+		callbackPath = "/callback"
+	}
+	if callbackPath[0] != '/' {
+		callbackPath = "/" + callbackPath
+	}
+
+	addr := fmt.Sprintf("%s:%d", listenHost, port)
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot listen on %s: %w (port may be in use; try --port %d)", addr, err, port+1)
 	}
 	defer ln.Close()
-	addr := ln.Addr().String()
-	redirectURI := fmt.Sprintf("http://%s/callback", addr)
+	redirectURI := authLoginRedirectURI(listenHost, port, callbackPath)
 
 	state := feishu.RandomState()
 	authURL, err := feishu.OAuthAuthorizeURL(cfg.App.ID, redirectURI, state)
@@ -55,7 +72,7 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 	errCh := make(chan error, 1)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(callbackPath, func(w http.ResponseWriter, r *http.Request) {
 		code, st, err := feishu.ParseOAuthCallback(r)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
