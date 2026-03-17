@@ -18,7 +18,16 @@ type PullManifest struct {
 	Mode          string `json:"mode"`
 
 	Drive struct {
+		// Roots are the starting folder tokens used for discovery.
+		Roots []string `json:"roots"`
+
 		Folders map[string][]DriveItem `json:"folders"`
-		Errors  []DiscoveryError       `json:"errors"`
+
+		Summary struct {
+			FolderCount int `json:"folder_count"`
+			ItemCount   int `json:"item_count"`
+		} `json:"summary"`
+
+		Errors []DiscoveryError `json:"errors"`
 	} `json:"drive"`
 }

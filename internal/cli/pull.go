@@ -50,10 +50,30 @@ func runPull(chdir, configPath string, dryRun bool) error {
 	}
 	m.Drive.Folders = map[string][]manifest.DriveItem{}
 
-	for _, folderToken := range cfg.Scope.DriveFolderTokens {
+	// If no folder tokens are configured, attempt discovery from Drive roots.
+	// Note: for tenant_access_token, Feishu Drive has no universal "root".
+	// We keep tenant-only for now and guide the user to provide folder tokens.
+	roots := cfg.Scope.DriveFolderTokens
+	if len(roots) == 0 {
+		roots = []string{"tenant"}
+		m.Drive.Errors = append(m.Drive.Errors, manifest.DiscoveryError{
+			Scope:   "drive",
+			Token:   "",
+			Message: "no drive_folder_tokens configured; tenant-only mode cannot enumerate Drive roots. Run `feishu-sync drive roots` for help, or set scope.drive_folder_tokens.",
+		})
+	}
+	m.Drive.Roots = roots
+
+	for _, folderToken := range roots {
+		// Skip placeholder roots.
+		if folderToken == "tenant" {
+			continue
+		}
 		items, errs := discovery.DiscoverDriveFolder(ctx, client, tenantToken, folderToken)
 		m.Drive.Folders[folderToken] = items
 		m.Drive.Errors = append(m.Drive.Errors, errs...)
+		m.Drive.Summary.FolderCount++
+		m.Drive.Summary.ItemCount += len(items)
 	}
 
 	enc := json.NewEncoder(os.Stdout)

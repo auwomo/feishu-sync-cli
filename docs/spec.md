@@ -25,6 +25,26 @@ Runs sync using the nearest workspace root (walk up to find `.feishu-sync/`).
 Options (draft):
 - `-C <dir>`: run as if started in `<dir>` (like `git -C`)
 - `-c <file>`: explicit config file path (advanced)
+- `--dry-run`: discover scope and print a manifest, without downloading
+
+### `feishu-sync drive roots`
+
+Prints guidance about Drive roots.
+
+Notes:
+- This CLI currently uses `tenant_access_token` (bot mode).
+- In tenant-only mode, Feishu Drive does not expose a universal "root folder" that can be enumerated across all users.
+- You must start discovery from one or more known folder tokens (configure `scope.drive_folder_tokens`).
+
+### `feishu-sync drive ls`
+
+Lists items in a Drive folder (and optionally recurses), to help find folder tokens and verify permissions.
+
+Options:
+- `-C <dir>`: run as if started in `<dir>`
+- `-c <file>`: explicit config file path (advanced)
+- `--folder <token>`: folder token to list (if omitted, uses the first configured `scope.drive_folder_tokens[0]`)
+- `--depth <N>`: recursion depth (0 = only this folder; default 1)
 
 ### `feishu-sync validate`
 
@@ -67,6 +87,16 @@ runtime:
   rate_limit_qps: 8
   incremental: true
 ```
+
+## Manifest (dry-run)
+
+`feishu-sync pull --dry-run` prints a JSON manifest.
+
+Drive section includes:
+- `drive.roots`: the starting folder tokens used for discovery
+- `drive.summary.folder_count`: how many starting folders were successfully scanned
+- `drive.summary.item_count`: total items returned across scanned folders
+- `drive.errors[]`: discovery errors
 
 ## Security
 

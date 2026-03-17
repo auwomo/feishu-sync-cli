@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -76,6 +77,44 @@ func Run(args []string) int {
 		}
 		return 0
 
+	case "drive":
+		fs := flag.NewFlagSet("drive", flag.ContinueOnError)
+		fs.SetOutput(os.Stderr)
+		chdir := fs.String("C", "", "run as if started in this directory")
+		configPath := fs.String("c", "", "explicit config file path (advanced)")
+		if err := fs.Parse(args[1:]); err != nil {
+			return 2
+		}
+		if fs.NArg() < 1 {
+			fmt.Fprintln(os.Stderr, "drive requires subcommand: roots | ls")
+			return 2
+		}
+		sub := fs.Arg(0)
+		switch sub {
+		case "roots":
+			if err := runDriveRoots(os.Stdout); err != nil {
+				fmt.Fprintln(os.Stderr, "FAIL:", err)
+				return 1
+			}
+			return 0
+		case "ls":
+			lsfs := flag.NewFlagSet("drive ls", flag.ContinueOnError)
+			lsfs.SetOutput(os.Stderr)
+			folder := lsfs.String("folder", "", "folder token to list")
+			depth := lsfs.Int("depth", 1, "recursion depth (0=only this folder)")
+			if err := lsfs.Parse(fs.Args()[1:]); err != nil {
+				return 2
+			}
+			if err := runDriveLs(context.Background(), *chdir, *configPath, driveLsOptions{FolderToken: *folder, Depth: *depth}, os.Stdout); err != nil {
+				fmt.Fprintln(os.Stderr, "FAIL:", err)
+				return 1
+			}
+			return 0
+		default:
+			fmt.Fprintln(os.Stderr, "unknown drive subcommand:", sub)
+			return 2
+		}
+
 	case "validate":
 		fs := flag.NewFlagSet("validate", flag.ContinueOnError)
 		fs.SetOutput(os.Stderr)
@@ -103,5 +142,7 @@ func Run(args []string) int {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "feishu-sync <command> [args]")
-	fmt.Fprintln(os.Stderr, "commands: init, secret, pull, validate")
+	fmt.Fprintln(os.Stderr, "commands: init, secret, pull, drive, validate")
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "drive subcommands: roots, ls")
 }
