@@ -33,10 +33,11 @@ func Run(args []string) int {
 		fs.SetOutput(os.Stderr)
 		chdir := fs.String("C", "", "run as if started in this directory")
 		configPath := fs.String("c", "", "explicit config file path (advanced)")
+		dryRun := fs.Bool("dry-run", false, "discover scope and print a manifest, without downloading")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}
-		if err := runPull(*chdir, *configPath); err != nil {
+		if err := runPull(*chdir, *configPath, *dryRun); err != nil {
 			fmt.Fprintln(os.Stderr, "FAIL:", err)
 			return 1
 		}
