@@ -13,11 +13,20 @@ export FEISHU_APP_SECRET='***'   # recommended (CI-friendly)
 # OR
 printf '%s' '***' | feishu-sync secret set
 
-# 3) explore Drive folders (helps you find folder tokens)
+# 3) choose auth mode
+# tenant mode (default): uses tenant_access_token
+# user mode: OAuth login to get user_access_token
+
+# If using user mode:
+#   - set auth.mode: user in .feishu-sync/config.yaml
+#   - login once (opens browser)
+feishu-sync auth login
+
+# 4) explore Drive folders
 feishu-sync drive roots
 feishu-sync drive ls --folder <folder_token> --depth 2
 
-# 4) pull (sync)
+# 5) pull (sync)
 feishu-sync pull
 ```
 
@@ -29,9 +38,11 @@ feishu-sync pull
 
 By default, output is written to `./backup/` (relative to the workspace root).
 
-## Drive discovery (important)
+## Auth modes
 
-This CLI currently uses `tenant_access_token` (bot mode).
+### Tenant mode (default)
+
+Uses `tenant_access_token` (bot mode).
 
 In tenant-only mode, Feishu Drive does not expose a universal tenant-wide root folder that can be enumerated across all users.
 To start Drive discovery, you must provide one or more starting folder tokens in `.feishu-sync/config.yaml`:
@@ -42,11 +53,26 @@ scope:
     - "fldxxxxx"  # folder token
 ```
 
-Use `feishu-sync drive ls` to verify permissions and explore subfolders.
+### User mode (OAuth)
+
+Set:
+
+```yaml
+auth:
+  mode: user
+```
+
+Then run:
+
+```bash
+feishu-sync auth login
+```
+
+In user mode, if `scope.drive_folder_tokens` is empty, `pull --dry-run` will auto-discover the current user's Drive root folder.
 
 ## Security
 
-- Do NOT commit `.feishu-sync/token.json` / `.feishu-sync/state.json`.
+- Do NOT commit `.feishu-sync/token.json`.
 - Do NOT put app secrets in `config.yaml`.
 - Secret resolution priority: env (`app.secret_env`) > file (`app.secret_file`, default `.feishu-sync/secret`).
 - Use `feishu-sync secret show` to confirm which source is used.

@@ -36,12 +36,14 @@ func runPull(chdir, configPath string, dryRun bool) error {
 	if err != nil {
 		return err
 	}
-	client := feishuNewClient()
 	ctx := context.Background()
-	tenantToken, err := client.TenantAccessToken(ctx, cfg.App.ID, secret)
+	token, isUser, err := resolveAccessToken(ctx, ws.Path(), cfg, secret)
 	if err != nil {
 		return err
 	}
+	// isUser indicates whether token is user_access_token (vs tenant_access_token)
+	_ = isUser
+	client := feishuNewClient()
 
 	m := manifest.PullManifest{
 		WorkspaceRoot: ws.Root,
@@ -55,12 +57,27 @@ func runPull(chdir, configPath string, dryRun bool) error {
 	// We keep tenant-only for now and guide the user to provide folder tokens.
 	roots := cfg.Scope.DriveFolderTokens
 	if len(roots) == 0 {
-		roots = []string{"tenant"}
-		m.Drive.Errors = append(m.Drive.Errors, manifest.DiscoveryError{
-			Scope:   "drive",
-			Token:   "",
-			Message: "no drive_folder_tokens configured; tenant-only mode cannot enumerate Drive roots. Run `feishu-sync drive roots` for help, or set scope.drive_folder_tokens.",
-		})
+		if authMode(cfg.Auth.Mode) == "user" {
+			// In user mode we can discover the current user's root folder.
+			userRoots, err := discovery.DiscoverUserDriveRoots(ctx, client, token)
+			if err != nil {
+				m.Drive.Errors = append(m.Drive.Errors, manifest.DiscoveryError{
+					Scope:   "drive",
+					Token:   "",
+					Message: "failed to discover user drive roots: " + err.Error(),
+				})
+				roots = []string{}
+			} else {
+				roots = userRoots
+			}
+		} else {
+			roots = []string{"tenant"}
+			m.Drive.Errors = append(m.Drive.Errors, manifest.DiscoveryError{
+				Scope:   "drive",
+				Token:   "",
+				Message: "no drive_folder_tokens configured; tenant-only mode cannot enumerate Drive roots. Run `feishu-sync drive roots` for help, or set scope.drive_folder_tokens.",
+			})
+		}
 	}
 	m.Drive.Roots = roots
 
@@ -69,7 +86,7 @@ func runPull(chdir, configPath string, dryRun bool) error {
 		if folderToken == "tenant" {
 			continue
 		}
-		items, errs := discovery.DiscoverDriveFolder(ctx, client, tenantToken, folderToken)
+		items, errs := discovery.DiscoverDriveFolder(ctx, client, token, folderToken)
 		m.Drive.Folders[folderToken] = items
 		m.Drive.Errors = append(m.Drive.Errors, errs...)
 		m.Drive.Summary.FolderCount++

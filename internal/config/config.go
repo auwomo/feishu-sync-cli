@@ -16,6 +16,11 @@ type Config struct {
 		SecretFile string `yaml:"secret_file"`
 	} `yaml:"app"`
 
+	Auth struct {
+		// Mode: tenant (default) | user
+		Mode string `yaml:"mode"`
+	} `yaml:"auth"`
+
 	Scope struct {
 		Mode             string   `yaml:"mode"`
 		DriveFolderTokens []string `yaml:"drive_folder_tokens"`

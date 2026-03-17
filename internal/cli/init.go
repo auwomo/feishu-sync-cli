@@ -13,6 +13,9 @@ const configTemplate = `app:
   secret_env: FEISHU_APP_SECRET
   secret_file: .feishu-sync/secret
 
+auth:
+  mode: tenant            # tenant | user
+
 scope:
   mode: all               # all | drive | wiki
   drive_folder_tokens: []

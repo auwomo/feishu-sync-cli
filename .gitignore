@@ -1,12 +1,7 @@
-.DS_Store
-
-# workspace secrets/state
-.feishu-sync/token.json
-.feishu-sync/state.json
+# workspace local secrets / tokens
 .feishu-sync/secret
-
-# default output
-backup/
-
-# logs
+.feishu-sync/token.json
 .feishu-sync/logs/
+
+# output backups (user-configurable; keep generic)
+backup/

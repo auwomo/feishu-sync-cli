@@ -62,6 +62,34 @@ func Run(args []string) int {
 			return 2
 		}
 
+	case "auth":
+		fs := flag.NewFlagSet("auth", flag.ContinueOnError)
+		fs.SetOutput(os.Stderr)
+		chdir := fs.String("C", "", "run as if started in this directory")
+		configPath := fs.String("c", "", "explicit config file path (advanced)")
+		noBrowser := fs.Bool("no-browser", false, "do not auto-open the browser")
+		port := fs.Int("port", 0, "callback listen port (0=random)")
+		if err := fs.Parse(args[1:]); err != nil {
+			return 2
+		}
+		if fs.NArg() < 1 {
+			fmt.Fprintln(os.Stderr, "auth requires subcommand: login")
+			return 2
+		}
+		sub := fs.Arg(0)
+		switch sub {
+		case "login":
+			if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{Port: *port, NoBrowser: *noBrowser}, os.Stdout); err != nil {
+				fmt.Fprintln(os.Stderr, "FAIL:", err)
+				return 1
+			}
+			fmt.Fprintln(os.Stdout, "OK")
+			return 0
+		default:
+			fmt.Fprintln(os.Stderr, "unknown auth subcommand:", sub)
+			return 2
+		}
+
 	case "pull":
 		fs := flag.NewFlagSet("pull", flag.ContinueOnError)
 		fs.SetOutput(os.Stderr)
@@ -92,7 +120,7 @@ func Run(args []string) int {
 		sub := fs.Arg(0)
 		switch sub {
 		case "roots":
-			if err := runDriveRoots(os.Stdout); err != nil {
+			if err := runDriveRoots(context.Background(), *chdir, *configPath, os.Stdout); err != nil {
 				fmt.Fprintln(os.Stderr, "FAIL:", err)
 				return 1
 			}
@@ -142,7 +170,7 @@ func Run(args []string) int {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "feishu-sync <command> [args]")
-	fmt.Fprintln(os.Stderr, "commands: init, secret, pull, drive, validate")
+	fmt.Fprintln(os.Stderr, "commands: init, secret, auth, pull, drive, validate")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "drive subcommands: roots, ls")
 }
