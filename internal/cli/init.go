@@ -11,6 +11,7 @@ import (
 const configTemplate = `app:
   id: cli_xxx
   secret_env: FEISHU_APP_SECRET
+  secret_file: .feishu-sync/secret
 
 scope:
   mode: all               # all | drive | wiki
@@ -26,12 +27,23 @@ runtime:
   incremental: true
 `
 
-func runInit(force bool, out string) error {
-	cwd, err := os.Getwd()
+func runInit(chdir string, force bool, out string) error {
+	start := ""
+	if chdir != "" {
+		start = chdir
+	} else {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		start = cwd
+	}
+
+	abs, err := filepath.Abs(start)
 	if err != nil {
 		return err
 	}
-	ws := workspace.Workspace{Root: cwd}
+	ws := workspace.Workspace{Root: abs}
 	return ws.Init(force, fmt.Sprintf(configTemplate, out))
 }
 

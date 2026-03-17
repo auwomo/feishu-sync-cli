@@ -11,9 +11,10 @@
 
 ### `feishu-sync init`
 
-Creates `.feishu-sync/` in the current directory and writes a config template.
+Creates `.feishu-sync/` in the target directory and writes a config template.
 
 Options (draft):
+- `-C <dir>`: initialize workspace in `<dir>` (like `git -C`)
 - `--out <relpath>`: default output directory (relative)
 - `--force`: overwrite existing `.feishu-sync/`
 
@@ -51,6 +52,7 @@ At workspace root:
 app:
   id: cli_xxx
   secret_env: FEISHU_APP_SECRET
+  secret_file: .feishu-sync/secret
 
 scope:
   mode: all               # all | drive | wiki
@@ -69,4 +71,8 @@ runtime:
 ## Security
 
 - `app.secret` must not be stored in config.
+- Use either:
+  - `app.secret_env` (recommended for CI), or
+  - `app.secret_file` (local dev; default `.feishu-sync/secret`)
+- Priority: env (`secret_env`) > file (`secret_file`).
 - `token.json` should be `.gitignore`'d by default.

@@ -32,7 +32,10 @@ func runPull(chdir, configPath string, dryRun bool) error {
 		return nil
 	}
 
-	secret := os.Getenv(cfg.App.SecretEnv)
+	secret, err := resolveAppSecret(ws, cfg)
+	if err != nil {
+		return err
+	}
 	client := feishuNewClient()
 	ctx := context.Background()
 	tenantToken, err := client.TenantAccessToken(ctx, cfg.App.ID, secret)

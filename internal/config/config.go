@@ -11,8 +11,9 @@ import (
 
 type Config struct {
 	App struct {
-		ID        string `yaml:"id"`
-		SecretEnv string `yaml:"secret_env"`
+		ID         string `yaml:"id"`
+		SecretEnv  string `yaml:"secret_env"`
+		SecretFile string `yaml:"secret_file"`
 	} `yaml:"app"`
 
 	Scope struct {

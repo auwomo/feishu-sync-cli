@@ -16,17 +16,50 @@ func Run(args []string) int {
 	case "init":
 		fs := flag.NewFlagSet("init", flag.ContinueOnError)
 		fs.SetOutput(os.Stderr)
+		chdir := fs.String("C", "", "initialize workspace in this directory")
 		force := fs.Bool("force", false, "overwrite existing .feishu-sync directory")
 		out := fs.String("out", "backup", "default output directory (relative to workspace root)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}
-		if err := runInit(*force, *out); err != nil {
+		if err := runInit(*chdir, *force, *out); err != nil {
 			fmt.Fprintln(os.Stderr, "FAIL:", err)
 			return 1
 		}
 		fmt.Fprintln(os.Stdout, "OK")
 		return 0
+
+	case "secret":
+		fs := flag.NewFlagSet("secret", flag.ContinueOnError)
+		fs.SetOutput(os.Stderr)
+		chdir := fs.String("C", "", "run as if started in this directory")
+		reveal := fs.Bool("reveal", false, "print the secret value (unsafe)")
+		if err := fs.Parse(args[1:]); err != nil {
+			return 2
+		}
+		if fs.NArg() < 1 {
+			fmt.Fprintln(os.Stderr, "secret requires subcommand: set | show")
+			return 2
+		}
+		sub := fs.Arg(0)
+		switch sub {
+		case "set":
+			if err := runSecretSet(*chdir, os.Stdin); err != nil {
+				fmt.Fprintln(os.Stderr, "FAIL:", err)
+				return 1
+			}
+			fmt.Fprintln(os.Stdout, "OK")
+			return 0
+		case "show":
+			if err := runSecretShow(*chdir, *reveal, os.Stdout); err != nil {
+				fmt.Fprintln(os.Stderr, "FAIL:", err)
+				return 1
+			}
+			return 0
+		default:
+			fmt.Fprintln(os.Stderr, "unknown secret subcommand:", sub)
+			return 2
+		}
 
 	case "pull":
 		fs := flag.NewFlagSet("pull", flag.ContinueOnError)
@@ -70,5 +103,5 @@ func Run(args []string) int {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "feishu-sync <command> [args]")
-	fmt.Fprintln(os.Stderr, "commands: init, pull, validate")
+	fmt.Fprintln(os.Stderr, "commands: init, secret, pull, validate")
 }

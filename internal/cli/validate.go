@@ -39,10 +39,12 @@ func runValidate(chdir, configPath string) error {
 	if err := cfg.ValidateRelativeOutputDir(); err != nil {
 		fails = append(fails, err.Error())
 	}
-	if cfg.App.SecretEnv == "" {
-		fails = append(fails, "app.secret_env is required")
-	} else if os.Getenv(cfg.App.SecretEnv) == "" {
-		fails = append(fails, fmt.Sprintf("env %s is empty or not set", cfg.App.SecretEnv))
+	if cfg.App.SecretEnv == "" && cfg.App.SecretFile == "" {
+		fails = append(fails, "either app.secret_env or app.secret_file is required")
+	} else {
+		if _, err := resolveAppSecret(ws, cfg); err != nil {
+			fails = append(fails, err.Error())
+		}
 	}
 	if cfg.App.ID == "" {
 		fails = append(fails, "app.id is required")

@@ -27,6 +27,7 @@ func TestRunPull_DryRun_PrintsManifest(t *testing.T) {
 	cfg := `app:
   id: "app"
   secret_env: "` + secretEnv + `"
+  secret_file: ".feishu-sync/secret"
 scope:
   mode: "drive"
   drive_folder_tokens: ["folder"]
