@@ -26,6 +26,7 @@ type authLoginOptions struct {
 
 	Remote      bool
 	RedirectURI string
+	Verbose     bool
 }
 
 func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginOptions, out io.Writer, errOut io.Writer) error {
@@ -55,11 +56,14 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 		callbackPath = "/" + callbackPath
 	}
 
+	localRedirectURI := authLoginRedirectURI(listenHost, port, callbackPath)
+
 	redirectURI := opts.RedirectURI
 	if redirectURI == "" {
-		redirectURI = authLoginRedirectURI(listenHost, port, callbackPath)
+		redirectURI = localRedirectURI
 		if opts.Remote {
-			fmt.Fprintln(out, "WARNING: --remote used without --redirect-uri; using local callback redirect (likely not whitelisted):", redirectURI)
+			st := newTermStyle(out)
+			fmt.Fprintln(out, st.warn("WARNING: --remote used without --redirect-uri; using local callback redirect (likely not whitelisted): ")+redirectURI)
 		}
 	}
 
@@ -69,29 +73,21 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 		return err
 	}
 
-	fmt.Fprintln(out, "Auth login:")
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Local callback (recommended on your laptop):")
-	fmt.Fprintf(out, "  feishu-sync auth login --host %s --port %d --callback-path %s\n", listenHost, port, callbackPath)
-	fmt.Fprintf(out, "  redirect_uri: %s\n", authLoginRedirectURI(listenHost, port, callbackPath))
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Remote/manual (recommended on a server):")
-	fmt.Fprintln(out, "  feishu-sync auth login --remote --redirect-uri <WHITELISTED_REDIRECT_URI>")
-	fmt.Fprintf(out, "  redirect_uri currently used: %s\n", redirectURI)
-	fmt.Fprintln(out, "  NOTE: after you authorize, the browser may show 404/blank — this is normal.")
-	fmt.Fprintln(out, "  Copy the FULL URL from the address bar (must include code= and state=),")
-	fmt.Fprintln(out, "  then paste it back into this terminal.")
-	fmt.Fprintln(out)
+	// Print concise, two-option guidance.
+	printAuthLoginOptions(out, opts, authURL, redirectURI, localRedirectURI)
 
 	var code string
 	if opts.Remote {
 		fmt.Fprintln(out, "Open this URL to authorize:")
 		fmt.Fprintln(out, authURL)
 		if !opts.NoBrowser {
+			st := newTermStyle(out)
+			fmt.Fprintln(out, st.faint("(will open browser)"))
 			_ = openBrowser(authURL)
 		}
 		fmt.Fprintln(out)
-		fmt.Fprintln(out, "NOTE: after you authorize, the browser may show 404/blank — this is normal.")
+		st := newTermStyle(out)
+		fmt.Fprintln(out, st.warn("Note: after you authorize, the browser may show 404/blank — this is normal."))
 		fmt.Fprintln(out, "Copy the FULL URL from the address bar (must include code= and state=),")
 		fmt.Fprintln(out, "then paste it back into this terminal.")
 		fmt.Fprintln(out)
@@ -111,7 +107,8 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 		} else if strings.Contains(strings.TrimSpace(input), "://") {
 			return errors.New("callback url missing state")
 		} else {
-			fmt.Fprintln(out, "WARNING: no state provided (raw code pasted); cannot validate state")
+			st2 := newTermStyle(out)
+			fmt.Fprintln(out, st2.warn("WARNING: no state provided (raw code pasted); cannot validate state"))
 		}
 		code = c
 	} else {
@@ -153,6 +150,8 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 		fmt.Fprintln(out, authURL)
 
 		if !opts.NoBrowser {
+			st := newTermStyle(out)
+			fmt.Fprintln(out, st.faint("(will open browser)"))
 			_ = openBrowser(authURL)
 		}
 

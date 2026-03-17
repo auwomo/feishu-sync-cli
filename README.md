@@ -60,6 +60,8 @@ feishu-sync auth login
 feishu-sync auth login --remote --redirect-uri <WHITELISTED_REDIRECT_URI>
 ```
 
+（调试用：加 `--verbose` 可以打印 redirect_uri 等更详细的参数）
+
 运行后会打印授权 URL。完成授权后：
 
 - 授权完成后浏览器可能会显示 **404/空白页** —— 这是正常的。

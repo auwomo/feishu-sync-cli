@@ -13,9 +13,11 @@ func TestAuthLogin_PrintsRemoteManualGuidance(t *testing.T) {
 	// the help block contains the key guidance.
 	// We reuse the exact strings printed in runAuthLogin.
 	s := strings.Join([]string{
-		"NOTE: after you authorize, the browser may show 404/blank — this is normal.",
-		"Copy the FULL URL from the address bar (must include code= and state=),",
-		"then paste it back into this terminal.",
+		"after you authorize, the browser may show 404/blank",
+		"Copy the FULL URL",
+		"code=",
+		"state=",
+		"paste it back into this terminal",
 	}, "\n")
 
 	out.WriteString(s)
