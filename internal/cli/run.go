@@ -19,7 +19,7 @@ func Run(args []string) int {
 		fs.SetOutput(os.Stderr)
 		chdir := fs.String("C", "", "initialize workspace in this directory")
 		force := fs.Bool("force", false, "overwrite existing .feishu-sync directory")
-		out := fs.String("out", "backup", "default output directory (relative to workspace root)")
+		out := fs.String("out", ".", "default output directory (relative to workspace root)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}

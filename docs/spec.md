@@ -72,7 +72,7 @@ At workspace root:
   - `token.json` (OAuth token cache)
   - `state.json` (incremental state)
   - `logs/`
-- `backup/` (default output dir)
+- `` (default output dir)
   - `drive/`
   - `wiki/`
   - `_meta/`
@@ -93,7 +93,7 @@ scope:
   wiki_space_ids: []
 
 output:
-  dir: backup             # must be relative to workspace root
+  dir: .             # must be relative to workspace root
 
 runtime:
   concurrency: 6

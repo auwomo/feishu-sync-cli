@@ -4,4 +4,5 @@
 .feishu-sync/logs/
 
 # output backups (user-configurable; keep generic)
-backup/
+drive/
+_meta/

@@ -1,8 +1,6 @@
 package cli
 
-import (
-	"fmt"
-	"os"
+import (	"os"
 	"path/filepath"
 
 	"github.com/your-org/feishu-sync/internal/workspace"
@@ -22,7 +20,7 @@ scope:
   wiki_space_ids: []
 
 output:
-  dir: %s                 # must be relative to workspace root
+  dir: .                  # relative to workspace root (default: workspace root)
 
 runtime:
   concurrency: 6
@@ -47,7 +45,7 @@ func runInit(chdir string, force bool, out string) error {
 		return err
 	}
 	ws := workspace.Workspace{Root: abs}
-	return ws.Init(force, fmt.Sprintf(configTemplate, out))
+	return ws.Init(force, configTemplate)
 }
 
 func ensureDir(path string) error {

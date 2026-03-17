@@ -43,7 +43,7 @@ func runPull(chdir, configPath string, dryRun bool) error {
 			return err
 		}
 
-		metaDir := filepath.Join(outAbs, "backup", "_meta")
+		metaDir := filepath.Join(outAbs, "_meta")
 		if err := os.MkdirAll(metaDir, 0o755); err != nil {
 			return err
 		}

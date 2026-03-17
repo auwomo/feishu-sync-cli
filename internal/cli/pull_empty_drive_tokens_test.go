@@ -33,7 +33,7 @@ scope:
   drive_folder_tokens: []
   wiki_space_ids: []
 output:
-  dir: "backup"
+  dir: "."
 `
 	if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfg), 0o644); err != nil {
 		t.Fatal(err)

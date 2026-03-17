@@ -4,7 +4,7 @@ import "testing"
 
 func TestValidateRelativeOutputDir(t *testing.T) {
 	var c Config
-	c.Output.Dir = "backup"
+	c.Output.Dir = "."
 	if err := c.ValidateRelativeOutputDir(); err != nil {
 		t.Fatalf("expected ok, got %v", err)
 	}

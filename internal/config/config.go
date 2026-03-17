@@ -57,7 +57,7 @@ func (c *Config) ValidateRelativeOutputDir() error {
 	if filepath.IsAbs(c.Output.Dir) {
 		return fmt.Errorf("output.dir must be relative, got absolute: %s", c.Output.Dir)
 	}
-	if clean := filepath.Clean(c.Output.Dir); clean == "." || clean == string(filepath.Separator) {
+	if clean := filepath.Clean(c.Output.Dir); clean == string(filepath.Separator) {
 		return fmt.Errorf("output.dir invalid: %s", c.Output.Dir)
 	}
 	return nil

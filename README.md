@@ -31,9 +31,9 @@ feishu-sync drive ls --folder <folder_token> --depth 2
 # Dry-run prints the manifest (discovery only)
 feishu-sync pull --dry-run
 
-# Real backup exports files into ./backup/drive/... and writes meta files:
-#   backup/_meta/manifest.json
-#   backup/_meta/errors-YYYYMMDD.jsonl
+# Real backup exports files into ./drive/... and writes meta files:
+#   _meta/manifest.json
+#   _meta/errors-YYYYMMDD.jsonl
 feishu-sync pull
 ```
 
@@ -43,7 +43,7 @@ feishu-sync pull
 
 - `./.feishu-sync/` — config + auth token + incremental state
 
-By default, output is written to `./backup/` (relative to the workspace root).
+By default, output is written to `./` (relative to the workspace root).
 
 ## Auth modes
 
