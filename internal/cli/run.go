@@ -28,6 +28,11 @@ func Run(args []string) int {
 			return 1
 		}
 		fmt.Fprintln(os.Stdout, "OK")
+		fmt.Fprintln(os.Stderr, "Next steps:")
+		fmt.Fprintln(os.Stderr, "  1) feishu-sync secret set")
+		fmt.Fprintln(os.Stderr, "  2) feishu-sync auth login")
+		fmt.Fprintln(os.Stderr, "  3) feishu-sync pull --dry-run   # preview")
+		fmt.Fprintln(os.Stderr, "  4) feishu-sync pull            # export")
 		return 0
 
 	case "secret":
@@ -81,7 +86,7 @@ func Run(args []string) int {
 		sub := fs.Arg(0)
 		switch sub {
 		case "login":
-			if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{ListenHost: *host, Port: *port, CallbackPath: *callbackPath, NoBrowser: *noBrowser}, os.Stdout); err != nil {
+			if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{ListenHost: *host, Port: *port, CallbackPath: *callbackPath, NoBrowser: *noBrowser}, os.Stdout, os.Stderr); err != nil {
 				fmt.Fprintln(os.Stderr, "FAIL:", err)
 				return 1
 			}

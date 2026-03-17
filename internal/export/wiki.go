@@ -49,8 +49,14 @@ func (p *Puller) exportWikiOne(ctx context.Context, it manifest.WikiItem) {
 	case "doc":
 		p.exportWikiDoc(ctx, it)
 	case "sheet", "bitable":
+		p.unsupportedMu.Lock()
+		p.unsupported++
+		p.unsupportedMu.Unlock()
 		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "wiki", Token: it.NodeToken, Type: it.ObjType, Path: it.Path, Name: it.Title, Reason: "unsupported: export not implemented"})
 	default:
+		p.unsupportedMu.Lock()
+		p.unsupported++
+		p.unsupportedMu.Unlock()
 		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "wiki", Token: it.NodeToken, Type: it.ObjType, Path: it.Path, Name: it.Title, Reason: "unsupported type"})
 	}
 }
@@ -83,6 +89,9 @@ func (p *Puller) exportWikiDocx(ctx context.Context, it manifest.WikiItem) {
 		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "wiki", Token: it.NodeToken, Type: it.ObjType, Path: it.Path, Name: it.Title, Reason: "write md: " + err.Error()})
 		return
 	}
+	p.wikiExportedMu.Lock()
+	p.wikiExported++
+	p.wikiExportedMu.Unlock()
 }
 
 func (p *Puller) exportWikiDoc(ctx context.Context, it manifest.WikiItem) {
@@ -116,5 +125,9 @@ func (p *Puller) exportWikiFile(ctx context.Context, it manifest.WikiItem) {
 	})
 	if err != nil {
 		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "wiki", Token: it.NodeToken, Type: it.ObjType, Path: it.Path, Name: it.Title, Reason: "file download: " + err.Error()})
+		return
 	}
+	p.wikiExportedMu.Lock()
+	p.wikiExported++
+	p.wikiExportedMu.Unlock()
 }

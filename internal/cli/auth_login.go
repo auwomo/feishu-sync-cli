@@ -24,7 +24,7 @@ type authLoginOptions struct {
 	NoBrowser    bool
 }
 
-func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginOptions, out io.Writer) error {
+func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginOptions, out io.Writer, errOut io.Writer) error {
 	ws, cfg, err := loadWorkspaceAndConfig(chdir, configPath)
 	if err != nil {
 		return err
@@ -144,6 +144,13 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 	}
 
 	fmt.Fprintln(out, "OK: user token saved to", store.Path)
+	fmt.Fprintln(out, "token:", store.Path)
+	if errOut != nil {
+		fmt.Fprintln(errOut, "Token saved:", store.Path)
+		fmt.Fprintln(errOut, "Next:")
+		fmt.Fprintln(errOut, "  feishu-sync pull --dry-run   # preview")
+		fmt.Fprintln(errOut, "  feishu-sync pull            # export")
+	}
 	return nil
 }
 

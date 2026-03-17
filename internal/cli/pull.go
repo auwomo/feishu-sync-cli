@@ -78,6 +78,11 @@ func runPull(chdir, configPath string, dryRun bool) error {
 		fmt.Fprintln(os.Stdout, "OK")
 		fmt.Fprintln(os.Stdout, "manifest:", manifestPath)
 		fmt.Fprintln(os.Stdout, "errors:", errorsPath)
+
+		// Human-friendly summary (stderr), keep stdout machine-readable.
+		fmt.Fprintf(os.Stderr, "Summary: drive exported=%d, wiki exported=%d, unsupported=%d, errors=%d\n", p.DriveExportedCount(), p.WikiExportedCount(), p.UnsupportedCount(), p.ErrorCount())
+		fmt.Fprintln(os.Stderr, "manifest:", manifestPath)
+		fmt.Fprintln(os.Stderr, "errors:", errorsPath)
 		return nil
 	}
 

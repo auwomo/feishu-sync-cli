@@ -30,6 +30,15 @@ type ErrorEntry struct {
 }
 
 type Puller struct {
+	// Counters for human-friendly summaries.
+	driveExportedMu sync.Mutex
+	driveExported   int
+	wikiExportedMu  sync.Mutex
+	wikiExported    int
+	unsupportedMu   sync.Mutex
+	unsupported     int
+	errorsCountMu   sync.Mutex
+	errorsCount     int
 	Client *feishu.Client
 	Token  string
 	Cfg    *config.Config
@@ -106,6 +115,34 @@ func (p *Puller) logError(e ErrorEntry) {
 	p.errorsMu.Lock()
 	defer p.errorsMu.Unlock()
 	_ = json.NewEncoder(p.errorsW).Encode(e)
+
+	p.errorsCountMu.Lock()
+	p.errorsCount++
+	p.errorsCountMu.Unlock()
+}
+
+func (p *Puller) DriveExportedCount() int {
+	p.driveExportedMu.Lock()
+	defer p.driveExportedMu.Unlock()
+	return p.driveExported
+}
+
+func (p *Puller) WikiExportedCount() int {
+	p.wikiExportedMu.Lock()
+	defer p.wikiExportedMu.Unlock()
+	return p.wikiExported
+}
+
+func (p *Puller) UnsupportedCount() int {
+	p.unsupportedMu.Lock()
+	defer p.unsupportedMu.Unlock()
+	return p.unsupported
+}
+
+func (p *Puller) ErrorCount() int {
+	p.errorsCountMu.Lock()
+	defer p.errorsCountMu.Unlock()
+	return p.errorsCount
 }
 
 func safeName(name string) string {
@@ -206,8 +243,14 @@ func (p *Puller) exportOne(ctx context.Context, it manifest.DriveItem) {
 	case "file":
 		p.exportFile(ctx, it)
 	case "sheet", "bitable":
+		p.unsupportedMu.Lock()
+		p.unsupported++
+		p.unsupportedMu.Unlock()
 		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "unsupported: export not implemented"})
 	default:
+		p.unsupportedMu.Lock()
+		p.unsupported++
+		p.unsupportedMu.Unlock()
 		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "unsupported type"})
 	}
 }
@@ -240,6 +283,9 @@ func (p *Puller) exportDocx(ctx context.Context, it manifest.DriveItem) {
 		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "write md: " + err.Error()})
 		return
 	}
+	p.driveExportedMu.Lock()
+	p.driveExported++
+	p.driveExportedMu.Unlock()
 }
 
 func (p *Puller) exportDoc(ctx context.Context, it manifest.DriveItem) {

@@ -9,23 +9,23 @@ import (
 )
 
 type fakeWiki struct {
-	spaces []*feishu.wikiSpacesResp
-	nodes  map[string][]*feishu.wikiNodesResp // key: parent token ("" for root)
+	spaces []*feishu.WikiSpacesResp
+	nodes  map[string][]*feishu.WikiNodesResp // key: parent token ("" for root)
 }
 
-func (f *fakeWiki) WikiSpaces(ctx context.Context, accessToken, pageToken string) (*feishu.wikiSpacesResp, error) {
+func (f *fakeWiki) WikiSpaces(ctx context.Context, accessToken, pageToken string) (*feishu.WikiSpacesResp, error) {
 	if len(f.spaces) == 0 {
-		return &feishu.wikiSpacesResp{}, nil
+		return &feishu.WikiSpacesResp{}, nil
 	}
 	resp := f.spaces[0]
 	f.spaces = f.spaces[1:]
 	return resp, nil
 }
 
-func (f *fakeWiki) WikiSpaceNodes(ctx context.Context, accessToken, spaceID, parentNodeToken, pageToken string) (*feishu.wikiNodesResp, error) {
+func (f *fakeWiki) WikiSpaceNodes(ctx context.Context, accessToken, spaceID, parentNodeToken, pageToken string) (*feishu.WikiNodesResp, error) {
 	pages := f.nodes[parentNodeToken]
 	if len(pages) == 0 {
-		return &feishu.wikiNodesResp{}, nil
+		return &feishu.WikiNodesResp{}, nil
 	}
 	resp := pages[0]
 	f.nodes[parentNodeToken] = pages[1:]
@@ -33,7 +33,7 @@ func (f *fakeWiki) WikiSpaceNodes(ctx context.Context, accessToken, spaceID, par
 }
 
 func TestDiscoverWikiSpaces_Pagination(t *testing.T) {
-	f := &fakeWiki{spaces: []*feishu.wikiSpacesResp{
+	f := &fakeWiki{spaces: []*feishu.WikiSpacesResp{
 		{Data: struct {
 			HasMore   bool        `json:"has_more"`
 			PageToken string      `json:"page_token"`
@@ -56,7 +56,7 @@ func TestDiscoverWikiSpaces_Pagination(t *testing.T) {
 }
 
 func TestDiscoverWikiTree_PathMapping(t *testing.T) {
-	f := &fakeWiki{nodes: map[string][]*feishu.wikiNodesResp{
+	f := &fakeWiki{nodes: map[string][]*feishu.WikiNodesResp{
 		"": {
 			{Data: struct {
 				HasMore   bool       `json:"has_more"`

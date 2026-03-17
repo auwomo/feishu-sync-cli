@@ -12,7 +12,7 @@ const configTemplate = `app:
   secret_file: .feishu-sync/secret
 
 auth:
-  mode: tenant            # tenant | user
+  mode: user              # tenant | user
 
 scope:
   mode: all               # all | drive | wiki

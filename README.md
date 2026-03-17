@@ -97,8 +97,8 @@ runtime:
 - `app.secret_env`: 从环境变量读取 app secret（推荐）
 - `app.secret_file`: secret 文件路径（相对 workspace root），默认 `.feishu-sync/secret`
 - `auth.mode`:
-  - `tenant`（默认）：使用 `tenant_access_token`（机器人/租户模式）
-  - `user`：走 OAuth，保存 `user_access_token` 到 `./.feishu-sync/token.json`
+  - `user`（默认）：走 OAuth，保存 `user_access_token` 到 `./.feishu-sync/token.json`
+  - `tenant`：使用 `tenant_access_token`（机器人/租户模式）
 - `scope.mode`（必填）：`all | drive | wiki`
 - `scope.drive_folder_tokens`：Drive 扫描起点（tenant 模式下通常必填）
 - `scope.wiki_space_ids`：只同步指定知识空间（留空=全部可见空间）
