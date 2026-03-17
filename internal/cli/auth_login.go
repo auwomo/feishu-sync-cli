@@ -86,8 +86,8 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 			_ = openBrowser(authURL)
 		}
 		fmt.Fprintln(out)
-		st := newTermStyle(out)
-		fmt.Fprintln(out, st.warn("Note: after you authorize, the browser may show 404/blank — this is normal."))
+		sty := newTermStyle(out)
+		fmt.Fprintln(out, sty.warn("Note: after you authorize, the browser may show 404/blank — this is normal."))
 		fmt.Fprintln(out, "Copy the FULL URL from the address bar (must include code= and state=),")
 		fmt.Fprintln(out, "then paste it back into this terminal.")
 		fmt.Fprintln(out)
@@ -96,21 +96,21 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 		if err != nil {
 			return err
 		}
-		c, st, err := parseOAuthPastedInput(input)
+		oauthCode, oauthState, err := parseOAuthPastedInput(input)
 		if err != nil {
 			return err
 		}
-		if st != "" {
-			if st != state {
+		if oauthState != "" {
+			if oauthState != state {
 				return errors.New("invalid oauth state")
 			}
 		} else if strings.Contains(strings.TrimSpace(input), "://") {
 			return errors.New("callback url missing state")
 		} else {
-			st2 := newTermStyle(out)
-			fmt.Fprintln(out, st2.warn("WARNING: no state provided (raw code pasted); cannot validate state"))
+			sty2 := newTermStyle(out)
+			fmt.Fprintln(out, sty2.warn("WARNING: no state provided (raw code pasted); cannot validate state"))
 		}
-		code = c
+		code = oauthCode
 	} else {
 		addr := fmt.Sprintf("%s:%d", listenHost, port)
 		ln, err := net.Listen("tcp", addr)
