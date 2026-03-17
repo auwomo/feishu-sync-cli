@@ -7,6 +7,6 @@ import (
 )
 
 type wikiClient interface {
-	WikiSpaces(ctx context.Context, accessToken, pageToken string) (*feishu.wikiSpacesResp, error)
-	WikiSpaceNodes(ctx context.Context, accessToken, spaceID, parentNodeToken, pageToken string) (*feishu.wikiNodesResp, error)
+	WikiSpaces(ctx context.Context, accessToken, pageToken string) (*feishu.WikiSpacesResp, error)
+	WikiSpaceNodes(ctx context.Context, accessToken, spaceID, parentNodeToken, pageToken string) (*feishu.WikiNodesResp, error)
 }

@@ -56,7 +56,7 @@ func NewPuller(client *feishu.Client, accessToken string, cfg *config.Config, ou
 		return nil, errors.New("config required")
 	}
 
-	if err := os.MkdirAll(filepath.Join(outAbs, "backup", "_meta"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(outAbs, "_meta"), 0o755); err != nil {
 		return nil, err
 	}
 
@@ -123,7 +123,7 @@ func shortHash(s string) string {
 }
 
 func (p *Puller) driveOutPath(item manifest.DriveItem) (mdOrFilePath string, assetsDir string) {
-	relDir := filepath.Join("backup", "drive", filepath.FromSlash(filepath.Dir(item.Path)))
+	relDir := filepath.Join("drive", filepath.FromSlash(filepath.Dir(item.Path)))
 	base := safeName(item.Name) + "__" + item.Token
 	ext := ".md"
 	if item.Type == "file" {

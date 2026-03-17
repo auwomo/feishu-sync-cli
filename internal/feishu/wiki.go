@@ -14,7 +14,7 @@ type WikiSpace struct {
   Name    string `json:"name"`
 }
 
-type wikiSpacesResp struct {
+type WikiSpacesResp struct {
   Code int    `json:"code"`
   Msg  string `json:"msg"`
   Data struct {
@@ -24,7 +24,7 @@ type wikiSpacesResp struct {
   } `json:"data"`
 }
 
-func (c *Client) WikiSpaces(ctx context.Context, accessToken, pageToken string) (*wikiSpacesResp, error) {
+func (c *Client) WikiSpaces(ctx context.Context, accessToken, pageToken string) (*WikiSpacesResp, error) {
   q := url.Values{}
   q.Set("page_size", "50")
   if pageToken != "" {
@@ -47,7 +47,7 @@ func (c *Client) WikiSpaces(ctx context.Context, accessToken, pageToken string) 
   if resp.StatusCode < 200 || resp.StatusCode >= 300 {
     return nil, fmt.Errorf("wiki spaces failed: http %d: %s", resp.StatusCode, string(b))
   }
-  var out wikiSpacesResp
+  var out WikiSpacesResp
   if err := json.Unmarshal(b, &out); err != nil {
     return nil, err
   }
@@ -67,7 +67,7 @@ type WikiNode struct {
   HasChild  bool   `json:"has_child"`
 }
 
-type wikiNodesResp struct {
+type WikiNodesResp struct {
   Code int    `json:"code"`
   Msg  string `json:"msg"`
   Data struct {
@@ -77,7 +77,7 @@ type wikiNodesResp struct {
   } `json:"data"`
 }
 
-func (c *Client) WikiSpaceNodes(ctx context.Context, accessToken, spaceID, parentNodeToken, pageToken string) (*wikiNodesResp, error) {
+func (c *Client) WikiSpaceNodes(ctx context.Context, accessToken, spaceID, parentNodeToken, pageToken string) (*WikiNodesResp, error) {
   q := url.Values{}
   q.Set("space_id", spaceID)
   q.Set("page_size", "50")
@@ -104,7 +104,7 @@ func (c *Client) WikiSpaceNodes(ctx context.Context, accessToken, spaceID, paren
   if resp.StatusCode < 200 || resp.StatusCode >= 300 {
     return nil, fmt.Errorf("wiki nodes failed: http %d: %s", resp.StatusCode, string(b))
   }
-  var out wikiNodesResp
+  var out WikiNodesResp
   if err := json.Unmarshal(b, &out); err != nil {
     return nil, err
   }
