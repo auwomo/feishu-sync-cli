@@ -107,6 +107,35 @@ func Run(args []string) int {
 		}
 		return 0
 
+	case "wiki":
+		fs := flag.NewFlagSet("wiki", flag.ContinueOnError)
+		fs.SetOutput(os.Stderr)
+		chdir := fs.String("C", "", "run as if started in this directory")
+		configPath := fs.String("c", "", "explicit config file path (advanced)")
+		if err := fs.Parse(args[1:]); err != nil {
+			return 2
+		}
+		if fs.NArg() < 1 {
+			fmt.Fprintln(os.Stderr, "wiki requires subcommand: ls")
+			return 2
+		}
+		sub := fs.Arg(0)
+		switch sub {
+		case "ls":
+			opt, _, err := parseWikiLsFlags(fs.Args()[1:])
+			if err != nil {
+				return 2
+			}
+			if err := runWikiLs(context.Background(), *chdir, *configPath, opt, os.Stdout); err != nil {
+				fmt.Fprintln(os.Stderr, "FAIL:", err)
+				return 1
+			}
+			return 0
+		default:
+			fmt.Fprintln(os.Stderr, "unknown wiki subcommand:", sub)
+			return 2
+		}
+
 	case "drive":
 		fs := flag.NewFlagSet("drive", flag.ContinueOnError)
 		fs.SetOutput(os.Stderr)
@@ -172,7 +201,8 @@ func Run(args []string) int {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "feishu-sync <command> [args]")
-	fmt.Fprintln(os.Stderr, "commands: init, secret, auth, pull, drive, validate")
+	fmt.Fprintln(os.Stderr, "commands: init, secret, auth, pull, drive, wiki, validate")
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "drive subcommands: roots, ls")
+	fmt.Fprintln(os.Stderr, "drive subcommands: roots, ls
+wiki subcommands: ls")
 }

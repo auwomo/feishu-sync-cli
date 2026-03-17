@@ -9,6 +9,18 @@
 
 ## Commands
 
+### `feishu-sync wiki ls`
+
+Lists accessible Wiki spaces. With `--nodes`, also lists nodes under each space.
+
+Options:
+- `-C <dir>`: run as if started in `<dir>`
+- `-c <file>`: explicit config file path (advanced)
+- `--space <space_id>`: filter to one space
+- `--nodes`: also list nodes
+
+
+
 ### `feishu-sync auth login`
 
 User-mode OAuth login.

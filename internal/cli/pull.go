@@ -56,9 +56,18 @@ func runPull(chdir, configPath string, dryRun bool) error {
 		defer p.Close()
 
 		// Export all discovered items.
-		for _, folderTok := range m.Drive.Roots {
-			items := m.Drive.Folders[folderTok]
-			p.ExportDriveItems(ctx, items)
+		if cfg.Scope.Mode == "all" || cfg.Scope.Mode == "drive" {
+			for _, folderTok := range m.Drive.Roots {
+				items := m.Drive.Folders[folderTok]
+				p.ExportDriveItems(ctx, items)
+			}
+		}
+
+		if cfg.Scope.Mode == "all" || cfg.Scope.Mode == "wiki" {
+			for _, sp := range m.Wiki.Spaces {
+				items := m.Wiki.Items[sp.SpaceID]
+				p.ExportWikiItems(ctx, items)
+			}
 		}
 
 		manifestPath := filepath.Join(metaDir, "manifest.json")
@@ -97,6 +106,7 @@ func buildPullManifest(ctx context.Context, ws *workspace.Workspace, cfg *config
 	outAbs := filepath.Join(ws.Root, cfg.Output.Dir)
 	m := manifest.PullManifest{WorkspaceRoot: ws.Root, OutputDir: outAbs, Mode: cfg.Scope.Mode}
 	m.Drive.Folders = map[string][]manifest.DriveItem{}
+	m.Wiki.Items = map[string][]manifest.WikiItem{}
 
 	roots := cfg.Scope.DriveFolderTokens
 	if len(roots) == 0 {
@@ -124,6 +134,38 @@ func buildPullManifest(ctx context.Context, ws *workspace.Workspace, cfg *config
 		m.Drive.Errors = append(m.Drive.Errors, errs...)
 		m.Drive.Summary.FolderCount++
 		m.Drive.Summary.ItemCount += len(items)
+	}
+
+	if cfg.Scope.Mode == "all" || cfg.Scope.Mode == "wiki" {
+		spaces, err := discovery.DiscoverWikiSpaces(ctx, client, token)
+		if err != nil {
+			m.Wiki.Errors = append(m.Wiki.Errors, manifest.DiscoveryError{Scope: "wiki", Token: "", Message: "failed to list spaces: " + err.Error()})
+			spaces = []feishu.WikiSpace{}
+		}
+		allowed := map[string]bool{}
+		if len(cfg.Scope.WikiSpaceIDs) > 0 {
+			for _, id := range cfg.Scope.WikiSpaceIDs {
+				allowed[id] = true
+			}
+		}
+		for _, sp := range spaces {
+			if len(allowed) > 0 && !allowed[sp.SpaceID] {
+				continue
+			}
+			m.Wiki.Spaces = append(m.Wiki.Spaces, struct {
+				SpaceID string `json:"space_id"`
+				Name    string `json:"name"`
+			}{SpaceID: sp.SpaceID, Name: sp.Name})
+			wsItems, wsErrs := discovery.DiscoverWikiTree(ctx, client, token, sp.SpaceID)
+			for i := range wsItems {
+				wsItems[i].SpaceName = sp.Name
+			}
+			m.Wiki.Items[sp.SpaceID] = wsItems
+			m.Wiki.Errors = append(m.Wiki.Errors, wsErrs...)
+			m.Wiki.Summary.SpaceCount++
+			m.Wiki.Summary.ItemCount += len(wsItems)
+			m.Wiki.Summary.NodeCount += len(wsItems)
+		}
 	}
 	return m, nil
 }

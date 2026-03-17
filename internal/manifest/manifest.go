@@ -32,4 +32,18 @@ type PullManifest struct {
 
 		Errors []DiscoveryError `json:"errors"`
 	} `json:"drive"`
+
+	Wiki struct {
+		Spaces []struct {
+			SpaceID string `json:"space_id"`
+			Name string `json:"name"`
+		} `json:"spaces"`
+		Items map[string][]WikiItem `json:"items"`
+		Summary struct {
+			SpaceCount int `json:"space_count"`
+			NodeCount int `json:"node_count"`
+			ItemCount int `json:"item_count"`
+		} `json:"summary"`
+		Errors []DiscoveryError `json:"errors"`
+	} `json:"wiki"`
 }
