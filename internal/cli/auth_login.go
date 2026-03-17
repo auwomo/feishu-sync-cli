@@ -78,6 +78,9 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 	fmt.Fprintln(out, "Remote/manual (recommended on a server):")
 	fmt.Fprintln(out, "  feishu-sync auth login --remote --redirect-uri <WHITELISTED_REDIRECT_URI>")
 	fmt.Fprintf(out, "  redirect_uri currently used: %s\n", redirectURI)
+	fmt.Fprintln(out, "  NOTE: after you authorize, the browser may show 404/blank — this is normal.")
+	fmt.Fprintln(out, "  Copy the FULL URL from the address bar (must include code= and state=),")
+	fmt.Fprintln(out, "  then paste it back into this terminal.")
 	fmt.Fprintln(out)
 
 	var code string
@@ -88,7 +91,11 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 			_ = openBrowser(authURL)
 		}
 		fmt.Fprintln(out)
-		fmt.Fprintln(out, "Paste the full callback URL (containing ?code=...) OR paste just the code:")
+		fmt.Fprintln(out, "NOTE: after you authorize, the browser may show 404/blank — this is normal.")
+		fmt.Fprintln(out, "Copy the FULL URL from the address bar (must include code= and state=),")
+		fmt.Fprintln(out, "then paste it back into this terminal.")
+		fmt.Fprintln(out)
+		fmt.Fprintln(out, "Paste the full callback URL (containing ?code=...&state=...) OR paste just the code:")
 		input, err := readLine(ctx, "")
 		if err != nil {
 			return err

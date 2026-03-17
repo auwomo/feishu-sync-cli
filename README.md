@@ -60,7 +60,10 @@ feishu-sync auth login
 feishu-sync auth login --remote --redirect-uri <WHITELISTED_REDIRECT_URI>
 ```
 
-运行后会打印授权 URL。完成授权后，把浏览器跳转后的 **完整回调 URL（包含 ?code=...&state=...）** 粘贴回终端。
+运行后会打印授权 URL。完成授权后：
+
+- 授权完成后浏览器可能会显示 **404/空白页** —— 这是正常的。
+- 请从地址栏复制 **完整 URL**（必须包含 `code=` 和 `state=`），然后粘贴回终端。
 
 注意：
 - 如果你粘贴的是完整 URL，则必须包含并匹配 `state`（用于防止 CSRF）。
