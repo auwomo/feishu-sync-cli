@@ -73,18 +73,10 @@ This creates:
 
 > You can edit `.feishu-sync/config.yaml` anytime.
 
-### 2) Set App Secret
-
-Preferred (safe, avoids shell history):
+### 2) Configure credentials
 
 ```bash
-printf '%s' 'YOUR_APP_SECRET' | feishu-sync secret set
-```
-
-Or (less safe; may be stored in shell history):
-
-```bash
-feishu-sync secret set --value 'YOUR_APP_SECRET'
+feishu-sync config
 ```
 
 ### 3) Login
@@ -125,18 +117,10 @@ Key fields:
 feishu-sync init [--app-id cli_xxx] [--force] [-C DIR]
 ```
 
-### `feishu-sync secret`
+### `feishu-sync config`
 
 ```bash
-# set from stdin (recommended)
-printf '%s' 'YOUR_APP_SECRET' | feishu-sync secret set
-
-# set from flag (unsafe)
-feishu-sync secret set --value 'YOUR_APP_SECRET'
-
-# show (hidden by default)
-feishu-sync secret show
-feishu-sync secret show --reveal
+feishu-sync config
 ```
 
 ### `feishu-sync login`

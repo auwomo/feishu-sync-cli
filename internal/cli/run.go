@@ -30,10 +30,24 @@ func Run(args []string) int {
 		}
 		fmt.Fprintln(os.Stdout, "OK")
 		fmt.Fprintln(os.Stderr, "Next steps:")
-		fmt.Fprintln(os.Stderr, "  1) feishu-sync secret set")
+		fmt.Fprintln(os.Stderr, "  1) feishu-sync config")
 		fmt.Fprintln(os.Stderr, "  2) feishu-sync login")
 		fmt.Fprintln(os.Stderr, "  3) feishu-sync pull --dry-run   # preview")
 		fmt.Fprintln(os.Stderr, "  4) feishu-sync pull            # export")
+		return 0
+
+	case "config":
+		fs := flag.NewFlagSet("config", flag.ContinueOnError)
+		fs.SetOutput(os.Stderr)
+		chdir := fs.String("C", "", "run as if started in this directory")
+		configPath := fs.String("c", "", "explicit config file path (advanced)")
+		if err := fs.Parse(args[1:]); err != nil {
+			return 2
+		}
+		if err := runConfigWizard(*chdir, *configPath, os.Stdin, os.Stdout, os.Stderr); err != nil {
+			fmt.Fprintln(os.Stderr, "FAIL:", err)
+			return 1
+		}
 		return 0
 
 	case "secret":
@@ -41,7 +55,6 @@ func Run(args []string) int {
 		fs.SetOutput(os.Stderr)
 		chdir := fs.String("C", "", "run as if started in this directory")
 		reveal := fs.Bool("reveal", false, "print the secret value (unsafe)")
-		setValue := fs.String("value", "", "secret value for 'secret set' (unsafe; prefer stdin)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}
@@ -52,12 +65,9 @@ func Run(args []string) int {
 		sub := fs.Arg(0)
 		switch sub {
 		case "set":
-			if err := runSecretSet(*chdir, *setValue, os.Stdin); err != nil {
-				fmt.Fprintln(os.Stderr, "FAIL:", err)
-				return 1
-			}
-			fmt.Fprintln(os.Stdout, "OK")
-			return 0
+			// Deprecated. Kept only to provide a clear migration hint.
+			fmt.Fprintln(os.Stderr, "已移除，请用 feishu-sync config")
+			return 2
 		case "show":
 			if err := runSecretShow(*chdir, *reveal, os.Stdout); err != nil {
 				fmt.Fprintln(os.Stderr, "FAIL:", err)
@@ -206,7 +216,7 @@ func Run(args []string) int {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "feishu-sync <command> [args]")
-	fmt.Fprintln(os.Stderr, "commands: init, secret, login, pull, drive, wiki, validate")
+	fmt.Fprintln(os.Stderr, "commands: init, config, secret, login, pull, drive, wiki, validate")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "drive subcommands: roots, ls")
 	fmt.Fprintln(os.Stderr, "wiki subcommands: ls")

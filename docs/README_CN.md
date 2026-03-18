@@ -61,18 +61,10 @@ feishu-sync init --app-id cli_xxx
 
 > 你可以随时编辑 `.feishu-sync/config.yaml`。
 
-### 2) 设置 App Secret
-
-推荐方式（更安全，避免进入 shell history）：
+### 2) 配置凭证
 
 ```bash
-printf '%s' 'YOUR_APP_SECRET' | feishu-sync secret set
-```
-
-或者（不太安全，可能会被写入 shell history）：
-
-```bash
-feishu-sync secret set --value 'YOUR_APP_SECRET'
+feishu-sync config
 ```
 
 ### 3) 登录
@@ -98,18 +90,10 @@ feishu-sync pull
 feishu-sync init [--app-id cli_xxx] [--force] [-C DIR]
 ```
 
-### `feishu-sync secret`
+### `feishu-sync config`
 
 ```bash
-# 从 stdin 写入（推荐）
-printf '%s' 'YOUR_APP_SECRET' | feishu-sync secret set
-
-# 通过 flag 写入（不推荐）
-feishu-sync secret set --value 'YOUR_APP_SECRET'
-
-# 查看（默认隐藏）
-feishu-sync secret show
-feishu-sync secret show --reveal
+feishu-sync config
 ```
 
 ### `feishu-sync login`

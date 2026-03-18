@@ -46,6 +46,9 @@ func TestInit_PrintsNextStepsToStderr(t *testing.T) {
 	if !strings.Contains(stderr.String(), "Next steps") {
 		t.Fatalf("expected next steps on stderr, got: %s", stderr.String())
 	}
+	if !strings.Contains(stderr.String(), "feishu-sync config") {
+		t.Fatalf("expected config guidance on stderr, got: %s", stderr.String())
+	}
 	if !strings.Contains(stderr.String(), "feishu-sync login") {
 		t.Fatalf("expected login guidance on stderr, got: %s", stderr.String())
 	}

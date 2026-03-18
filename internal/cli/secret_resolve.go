@@ -25,7 +25,7 @@ func resolveAppSecret(ws *workspace.Workspace, cfg *config.Config) (string, erro
 
 	f, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("missing app secret: set env %s or run `feishu-sync secret set` to create %s", cfg.App.SecretEnv, path)
+		return "", fmt.Errorf("missing app secret: set env %s or run `feishu-sync config` to create %s", cfg.App.SecretEnv, path)
 	}
 	defer f.Close()
 
