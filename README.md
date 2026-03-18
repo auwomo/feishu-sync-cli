@@ -6,7 +6,7 @@ A small CLI to export Feishu/Lark content (Drive + Wiki) to local files.
 - **Scope**: all / drive / wiki
 - **Output**: export to a local directory
 
-[中文文档](docs/README_CN.md)
+[中文文档](docs/README_CN.md) | [Agent Guide](docs/AGENTS.md)
 
 ---
 

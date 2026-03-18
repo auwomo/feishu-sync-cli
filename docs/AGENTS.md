@@ -21,11 +21,13 @@ go install ./cmd/feishu-sync
 In an empty folder (workspace):
 
 ```bash
-feishu-sync init --app-id cli_xxx
-feishu-sync config          # interactive config wizard
-feishu-sync login           # user auth (browser)
-feishu-sync pull            # export to output.dir
+1) Initialize workspace:    feishu-sync init --app-id cli_xxx
+2) Configure credentials:   feishu-sync config
+3) OAuth login (user mode): feishu-sync login
+4) Export:                  feishu-sync pull
 ```
+
+Skill template (OpenClaw): `skills/feishu-sync/SKILL.md`
 
 Preview manifest only (no downloads):
 
