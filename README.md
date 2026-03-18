@@ -6,22 +6,20 @@ A small CLI to export Feishu/Lark content (Drive + Wiki) to local files.
 - **Scope**: all / drive / wiki
 - **Output**: export to a local directory
 
+[中文文档](docs/README_CN.md)
+
 ---
 
-## 安装 / Install
+## Install
 
-### macOS / Linux (recommended)
+### macOS / Linux (bash)
 
 Default install dir: **~/.local/bin** (no sudo).
 
+Install:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts/install.sh | sh
-```
-
-Install a specific version:
-
-```bash
-VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts/install.sh | sh
 ```
 
 Uninstall:
@@ -34,14 +32,10 @@ curl -fsSL https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts
 
 Installs to **$env:LOCALAPPDATA\feishu-sync\bin**.
 
+Install:
+
 ```powershell
 irm https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts/install.ps1 | iex
-```
-
-Install a specific version:
-
-```powershell
-irm https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts/install.ps1 | iex; install.ps1 -Version v0.1.0
 ```
 
 Uninstall:
@@ -52,12 +46,11 @@ install.ps1 -Uninstall
 
 > Note: Windows binaries may not be published yet. The script will print a friendly message if none are available.
 
-
 ---
 
-## 快速开始 / Quickstart
+## Quickstart
 
-### 1) 初始化工作区 / Init workspace
+### 1) Init workspace
 
 ```bash
 feishu-sync init --app-id cli_xxx
@@ -70,7 +63,7 @@ This creates:
 
 > You can edit `.feishu-sync/config.yaml` anytime.
 
-### 2) 设置 App Secret / Set secret
+### 2) Set App Secret
 
 Preferred (safe, avoids shell history):
 
@@ -84,13 +77,13 @@ Or (less safe; may be stored in shell history):
 feishu-sync secret set --value 'YOUR_APP_SECRET'
 ```
 
-### 3) 登录 / Login
+### 3) Login
 
 ```bash
 feishu-sync login
 ```
 
-### 4) 预览/导出 / Preview & export
+### 4) Preview & export
 
 ```bash
 feishu-sync pull --dry-run
@@ -99,7 +92,7 @@ feishu-sync pull
 
 ---
 
-## 配置 / Configuration
+## Configuration
 
 Workspace config lives at `.feishu-sync/config.yaml`.
 
@@ -114,7 +107,7 @@ Key fields:
 
 ---
 
-## 命令 / Commands
+## Commands
 
 ### `feishu-sync init`
 
