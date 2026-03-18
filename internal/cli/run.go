@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"time"
 	"flag"
 	"fmt"
 	"os"
@@ -30,7 +31,7 @@ func Run(args []string) int {
 		fmt.Fprintln(os.Stdout, "OK")
 		fmt.Fprintln(os.Stderr, "Next steps:")
 		fmt.Fprintln(os.Stderr, "  1) feishu-sync secret set")
-		fmt.Fprintln(os.Stderr, "  2) feishu-sync auth login")
+		fmt.Fprintln(os.Stderr, "  2) feishu-sync login")
 		fmt.Fprintln(os.Stderr, "  3) feishu-sync pull --dry-run   # preview")
 		fmt.Fprintln(os.Stderr, "  4) feishu-sync pull            # export")
 		return 0
@@ -67,6 +68,25 @@ func Run(args []string) int {
 			return 2
 		}
 
+	case "login":
+		fs := flag.NewFlagSet("login", flag.ContinueOnError)
+		fs.SetOutput(os.Stderr)
+		chdir := fs.String("C", "", "run as if started in this directory")
+		configPath := fs.String("c", "", "explicit config file path (advanced)")
+		noBrowser := fs.Bool("no-browser", false, "do not auto-open the browser")
+		redirectURI := fs.String("redirect-uri", "", "override redirect_uri for manual flow (must be whitelisted in Feishu app)")
+		verbose := fs.Bool("verbose", false, "verbose output")
+		timeout := fs.Duration("timeout", 2*time.Minute, "timeout for local callback flow")
+		if err := fs.Parse(args[1:]); err != nil {
+			return 2
+		}
+		if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{NoBrowser: *noBrowser, RedirectURI: *redirectURI, Verbose: *verbose, Timeout: *timeout}, os.Stdout, os.Stderr); err != nil {
+			fmt.Fprintln(os.Stderr, "FAIL:", err)
+			return 1
+		}
+		fmt.Fprintln(os.Stdout, "OK")
+		return 0
+
 	case "auth":
 		fs := flag.NewFlagSet("auth", flag.ContinueOnError)
 		fs.SetOutput(os.Stderr)
@@ -77,9 +97,6 @@ func Run(args []string) int {
 		manual := fs.Bool("manual", false, "alias for --remote")
 		redirectURI := fs.String("redirect-uri", "", "override redirect_uri for remote/manual mode (must be whitelisted in Feishu app)")
 		verbose := fs.Bool("verbose", false, "verbose output (show redirect_uri details, etc)")
-		host := fs.String("host", "127.0.0.1", "callback listen host")
-		port := fs.Int("port", 18900, "callback listen port")
-		callbackPath := fs.String("callback-path", "/callback", "callback path")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}
@@ -90,7 +107,7 @@ func Run(args []string) int {
 		sub := fs.Arg(0)
 		switch sub {
 		case "login":
-			if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{ListenHost: *host, Port: *port, CallbackPath: *callbackPath, NoBrowser: *noBrowser, Remote: *remote || *manual, RedirectURI: *redirectURI, Verbose: *verbose}, os.Stdout, os.Stderr); err != nil {
+			if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{NoBrowser: *noBrowser, RedirectURI: *redirectURI, Verbose: *verbose}, os.Stdout, os.Stderr); err != nil {
 				fmt.Fprintln(os.Stderr, "FAIL:", err)
 				return 1
 			}
@@ -210,7 +227,7 @@ func Run(args []string) int {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "feishu-sync <command> [args]")
-	fmt.Fprintln(os.Stderr, "commands: init, secret, auth, pull, drive, wiki, validate")
+	fmt.Fprintln(os.Stderr, "commands: init, secret, login, auth, pull, drive, wiki, validate")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "drive subcommands: roots, ls")
 	fmt.Fprintln(os.Stderr, "wiki subcommands: ls")

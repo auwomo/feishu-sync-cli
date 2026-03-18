@@ -2,38 +2,22 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"net"
-	"net/http"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/your-org/feishu-sync/internal/auth"
 	"github.com/your-org/feishu-sync/internal/feishu"
 )
 
-// netListen is overridden in tests.
-var netListen = net.Listen
-
-// listener is the minimal interface we need from net.Listener.
-type listener interface {
-	Close() error
-	Addr() net.Addr
-}
-
 type authLoginOptions struct {
-	ListenHost   string
-	Port         int
-	CallbackPath string
-	Timeout      time.Duration
-	NoBrowser    bool
+	Timeout   time.Duration
+	NoBrowser bool
 
-	Remote      bool
+	// For manual flow only: override redirect_uri (must be whitelisted in Feishu app).
 	RedirectURI string
 	Verbose     bool
 }
@@ -48,32 +32,12 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 		return err
 	}
 
-	listenHost := opts.ListenHost
-	port := opts.Port
-	callbackPath := opts.CallbackPath
-
-	if listenHost == "" {
-		listenHost = "127.0.0.1"
-	}
-	if port == 0 {
-		port = 18900
-	}
-	if callbackPath == "" {
-		callbackPath = "/callback"
-	}
-	if callbackPath[0] != '/' {
-		callbackPath = "/" + callbackPath
-	}
-
-	localRedirectURI := authLoginRedirectURI(listenHost, port, callbackPath)
+	// Fixed local callback for the built-in local flow.
+	localRedirectURI := authLoginRedirectURI("127.0.0.1", 18900, "/callback")
 
 	effectiveRedirectURI := localRedirectURI
 	if opts.RedirectURI != "" {
-		// Allow overriding redirect_uri in both local and remote modes.
 		effectiveRedirectURI = opts.RedirectURI
-	} else if opts.Remote {
-		st := newTermStyle(out)
-		fmt.Fprintln(out, st.warn("WARNING: --remote used without --redirect-uri; using local callback redirect (likely not whitelisted): ")+effectiveRedirectURI)
 	}
 
 	state := feishu.RandomState()
@@ -82,105 +46,16 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 		return err
 	}
 
-	// Print concise, two-option guidance.
 	printAuthLoginOptions(out, opts, authURL, effectiveRedirectURI, localRedirectURI)
 
-	var code string
-	if opts.Remote {
-		fmt.Fprintln(out, "Open this URL to authorize:")
-		fmt.Fprintln(out, authURL)
-		if !opts.NoBrowser {
-			st := newTermStyle(out)
-			fmt.Fprintln(out, st.faint("(will open browser)"))
-			_ = openBrowser(authURL)
-		}
-		fmt.Fprintln(out)
-		sty := newTermStyle(out)
-		fmt.Fprintln(out, sty.warn("Note: after you authorize, the browser may show 404/blank — this is normal."))
-		fmt.Fprintln(out, "Copy the FULL URL from the address bar (must include code= and state=),")
-		fmt.Fprintln(out, "then paste it back into this terminal.")
-		fmt.Fprintln(out)
-		fmt.Fprintln(out, "Paste the full callback URL (containing ?code=...&state=...) OR paste just the code:")
-		input, err := readLine(ctx, "")
+	// Offer manual flow first (user can paste immediately). Empty input skips.
+	code, err := tryManualAuth(ctx, out, state)
+	if err != nil || code == "" {
+		// Fall back to local callback flow.
+		code, err = tryLocalAuth(ctx, out, authURL, state, opts.NoBrowser, opts.Timeout)
 		if err != nil {
 			return err
 		}
-		oauthCode, oauthState, err := parseOAuthPastedInput(input)
-		if err != nil {
-			return err
-		}
-		if oauthState != "" {
-			if oauthState != state {
-				return errors.New("invalid oauth state")
-			}
-		} else if strings.Contains(strings.TrimSpace(input), "://") {
-			return errors.New("callback url missing state")
-		} else {
-			sty2 := newTermStyle(out)
-			fmt.Fprintln(out, sty2.warn("WARNING: no state provided (raw code pasted); cannot validate state"))
-		}
-		code = oauthCode
-	} else {
-		addr := fmt.Sprintf("%s:%d", listenHost, port)
-		ln, err := netListen("tcp", addr)
-		if err != nil {
-			return fmt.Errorf("cannot listen on %s: %w (port may be in use; try --port %d)", addr, err, port+1)
-		}
-		defer ln.Close()
-
-		codeCh := make(chan string, 1)
-		errCh := make(chan error, 1)
-
-		mux := http.NewServeMux()
-		mux.HandleFunc(callbackPath, func(w http.ResponseWriter, r *http.Request) {
-			code, st, err := feishu.ParseOAuthCallback(r)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				_, _ = w.Write([]byte("Auth failed: " + err.Error()))
-				errCh <- err
-				return
-			}
-			if st != state {
-				w.WriteHeader(http.StatusBadRequest)
-				_, _ = w.Write([]byte("Auth failed: invalid state"))
-				errCh <- errors.New("invalid oauth state")
-				return
-			}
-			_, _ = w.Write([]byte("OK. You can close this tab and return to the terminal."))
-			codeCh <- code
-		})
-
-		srv := &http.Server{Handler: mux}
-		go func() {
-			_ = srv.Serve(ln)
-		}()
-
-		fmt.Fprintln(out, "Open this URL to authorize:")
-		fmt.Fprintln(out, authURL)
-
-		if !opts.NoBrowser {
-			st := newTermStyle(out)
-			fmt.Fprintln(out, st.faint("(will open browser)"))
-			_ = openBrowser(authURL)
-		}
-
-		timeout := opts.Timeout
-		if timeout <= 0 {
-			timeout = 2 * time.Minute
-		}
-		ctx2, cancel := context.WithTimeout(ctx, timeout)
-		defer cancel()
-
-		select {
-		case code = <-codeCh:
-		case err := <-errCh:
-			_ = srv.Shutdown(context.Background())
-			return err
-		case <-ctx2.Done():
-			_ = srv.Shutdown(context.Background())
-			return fmt.Errorf("auth timeout after %s", timeout)
-		}
-		_ = srv.Shutdown(context.Background())
 	}
 
 	client := feishuNewClient()
@@ -206,7 +81,6 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 	}
 
 	fmt.Fprintln(out, "OK: user token saved to", store.Path)
-	fmt.Fprintln(out, "token:", store.Path)
 	if errOut != nil {
 		fmt.Fprintln(errOut, "Token saved:", store.Path)
 		fmt.Fprintln(errOut, "Next:")
