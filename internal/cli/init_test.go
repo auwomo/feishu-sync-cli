@@ -13,7 +13,7 @@ func TestRunInit_WithChdir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := runInit(target, false, "backup"); err != nil {
+	if err := runInit(target, false, initOptions{}); err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
 
