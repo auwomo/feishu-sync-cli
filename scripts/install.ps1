@@ -1,8 +1,11 @@
 Param(
   [string]$Version = "latest",
   [switch]$Uninstall,
-  [switch]$AddToPath
+  [switch]$NoPath
 )
+
+# Default behavior: add install dir to user PATH unless -NoPath is specified.
+$AddToPath = -not $NoPath
 
 $ErrorActionPreference = "Stop"
 
@@ -32,9 +35,9 @@ function Ensure-Path {
       Write-Info "Already on user PATH: $InstallDir"
     }
   } else {
-    Write-Warn "$InstallDir is not guaranteed to be on PATH"
-    Write-Host "Add it to PATH (User): $InstallDir"
-    Write-Host "Or re-run with: -AddToPath"
+    Write-Warn "$InstallDir is not on PATH (because -NoPath was used)"
+    Write-Host "You can add it to your user PATH: $InstallDir"
+    Write-Host "Or re-run without -NoPath to add it automatically."
   }
 }
 
@@ -45,7 +48,22 @@ if ($Uninstall) {
   } else {
     Write-Info "Not installed: $Target"
   }
-  exit 0
+
+  # Best-effort PATH removal (user scope). Some terminals cache env; user may need to verify manually.
+  $current = [Environment]::GetEnvironmentVariable("Path", "User")
+  if ($current -and ($current -like "*$InstallDir*")) {
+    $parts = $current.Split(';') | Where-Object { $_ -and ($_ -ne $InstallDir) }
+    $newPath = ($parts -join ';')
+    [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+    Write-Ok "Removed from user PATH: $InstallDir"
+  } else {
+    Write-Info "Install dir not found on user PATH: $InstallDir"
+    Write-Host "If you added it manually, remove this entry from your PATH: $InstallDir"
+  }
+
+  Write-Host "Next steps:"
+  Write-Host "  - Open a new terminal"
+  return 0
 }
 
 if ($Version -eq "latest") {
@@ -83,7 +101,7 @@ if (-not $asset) {
 if (-not $asset) {
   Write-Warn "Windows binaries not published yet"
   Write-Host "See releases: https://github.com/$Repo/releases"
-  exit 3
+  return 3
 }
 
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
@@ -97,7 +115,7 @@ Expand-Archive -Path $zip -DestinationPath $tmp -Force
 $exe = Get-ChildItem -Path $tmp -Recurse -Filter $BinName | Select-Object -First 1
 if (-not $exe) {
   Write-Err "Downloaded asset did not contain $BinName"
-  exit 5
+  return 5
 }
 
 Copy-Item -Force $exe.FullName $Target
@@ -106,4 +124,11 @@ Write-Ok "Installed to $Target"
 Ensure-Path
 
 Remove-Item -Recurse -Force $tmp
-exit 0
+
+Write-Host ""
+Write-Ok "Done."
+Write-Host "Next steps:"
+Write-Host "  - Open a new terminal"
+Write-Host "  - feishu-sync --help"
+
+return 0

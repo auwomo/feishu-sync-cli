@@ -169,6 +169,7 @@ uninstall() {
   else
     info "not installed: ${BOLD}${target}${RESET}"
   fi
+  info "uninstall dir: ${BOLD}${INSTALL_DIR}${RESET}"
 }
 
 main() {
@@ -257,9 +258,17 @@ main() {
 
   if ! printf "%s" ":$PATH:" | grep -q ":$INSTALL_DIR:"; then
     warn "${BOLD}${INSTALL_DIR}${RESET} is not on PATH"
-    say "  add this to your shell profile:"
-    say "    export PATH=\"$INSTALL_DIR:\$PATH\""
+    say "Add ONE of the following to your shell config, then restart your terminal:"
+    say "  bash/zsh:"
+    say "    echo 'export PATH=\"$INSTALL_DIR:\$PATH\"' >> ~/.profile"
+    say "  fish:"
+    say "    fish_add_path -m $INSTALL_DIR"
   fi
+
+  say ""
+  say "Next steps:"
+  say "  - Open a new terminal"
+  say "  - ${BIN_NAME} --help"
 
   exit 0
 }

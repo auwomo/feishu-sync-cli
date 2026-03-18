@@ -16,6 +16,8 @@ A small CLI to export Feishu/Lark content (Drive + Wiki) to local files.
 
 Default install dir: **~/.local/bin** (no sudo).
 
+> If `~/.local/bin` is not on your PATH, the installer will print a copy-paste command to add it (restart your terminal after changing PATH).
+
 Install:
 
 ```bash
@@ -32,6 +34,8 @@ curl -fsSL https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts
 
 Installs to **$env:LOCALAPPDATA\feishu-sync\bin**.
 
+> By default, the installer adds the install dir to your **user PATH** (open a new terminal for it to take effect). Use `-NoPath` to disable.
+
 Install:
 
 ```powershell
@@ -42,6 +46,12 @@ Uninstall:
 
 ```powershell
 install.ps1 -Uninstall
+```
+
+Install without modifying PATH:
+
+```powershell
+irm https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts/install.ps1 | iex -NoPath
 ```
 
 > Note: Windows binaries may not be published yet. The script will print a friendly message if none are available.
