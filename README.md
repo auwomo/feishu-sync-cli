@@ -10,9 +10,48 @@ A small CLI to export Feishu/Lark content (Drive + Wiki) to local files.
 
 ## 安装 / Install
 
+### macOS / Linux (recommended)
+
+Default install dir: **~/.local/bin** (no sudo).
+
 ```bash
-go install github.com/your-org/feishu-sync@latest
+curl -fsSL https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts/install.sh | sh
 ```
+
+Install a specific version:
+
+```bash
+VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts/install.sh | sh
+```
+
+Uninstall:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts/install.sh | sh -s -- --uninstall
+```
+
+### Windows (PowerShell)
+
+Installs to **$env:LOCALAPPDATA\feishu-sync\bin**.
+
+```powershell
+irm https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts/install.ps1 | iex
+```
+
+Install a specific version:
+
+```powershell
+irm https://raw.githubusercontent.com/auwomo/feishu-sync-cli/main/scripts/install.ps1 | iex; install.ps1 -Version v0.1.0
+```
+
+Uninstall:
+
+```powershell
+install.ps1 -Uninstall
+```
+
+> Note: Windows binaries may not be published yet. The script will print a friendly message if none are available.
+
 
 ---
 
