@@ -11,10 +11,10 @@ import (
 	"github.com/your-org/feishu-sync/internal/config"
 	"github.com/your-org/feishu-sync/internal/discovery"
 	"github.com/your-org/feishu-sync/internal/export"
-	"github.com/your-org/feishu-sync/internal/manifest"
-	"github.com/your-org/feishu-sync/internal/workspace"
-
 	"github.com/your-org/feishu-sync/internal/feishu"
+	"github.com/your-org/feishu-sync/internal/manifest"
+	"github.com/your-org/feishu-sync/internal/meta"
+	"github.com/your-org/feishu-sync/internal/workspace"
 )
 
 func runPull(chdir, configPath string, dryRun bool) error {
@@ -47,9 +47,21 @@ func runPull(chdir, configPath string, dryRun bool) error {
 		if err := os.MkdirAll(metaDir, 0o755); err != nil {
 			return err
 		}
+
+		runID := meta.NewRunID()
+		run := meta.NewRun(runID, cfg)
+
+		ledgerPath := filepath.Join(metaDir, "ledger.jsonl")
+		led, err := meta.OpenLedger(ledgerPath, runID)
+		if err != nil {
+			return err
+		}
+		defer led.Close()
+
+		// Keep old errors-*.jsonl for compatibility.
 		ts := time.Now().Format("20060102")
 		errorsPath := filepath.Join(metaDir, "errors-"+ts+".jsonl")
-		p, err := export.NewPuller(client, token, cfg, outAbs, errorsPath)
+		p, err := export.NewPuller(client, token, cfg, outAbs, errorsPath, led, runID)
 		if err != nil {
 			return err
 		}
@@ -70,18 +82,32 @@ func runPull(chdir, configPath string, dryRun bool) error {
 			}
 		}
 
+		run.End()
+		mm := run.BuildManifest()
+		mm.Counts.Drive.RootsDiscovered = len(m.Drive.Roots)
+		mm.Counts.Drive.ItemsDiscovered = m.Drive.Summary.ItemCount
+		mm.Counts.Drive.Exported = p.DriveExportedCount()
+		mm.Counts.Drive.Unsupported = p.UnsupportedCount()
+		mm.Counts.Drive.Errors = p.ErrorCount() + len(m.Drive.Errors)
+		mm.Counts.Wiki.SpacesDiscovered = len(m.Wiki.Spaces)
+		mm.Counts.Wiki.ItemsDiscovered = m.Wiki.Summary.ItemCount
+		mm.Counts.Wiki.Exported = p.WikiExportedCount()
+		mm.Counts.Wiki.Errors = p.ErrorCount() + len(m.Wiki.Errors)
+
 		manifestPath := filepath.Join(metaDir, "manifest.json")
-		enc, _ := json.MarshalIndent(m, "", "  ")
+		enc, _ := json.MarshalIndent(mm, "", "  ")
 		if err := os.WriteFile(manifestPath, append(enc, '\n'), 0o644); err != nil {
 			return err
 		}
 		fmt.Fprintln(os.Stdout, "OK")
 		fmt.Fprintln(os.Stdout, "manifest:", manifestPath)
+		fmt.Fprintln(os.Stdout, "ledger:", ledgerPath)
 		fmt.Fprintln(os.Stdout, "errors:", errorsPath)
 
 		// Human-friendly summary (stderr), keep stdout machine-readable.
 		fmt.Fprintf(os.Stderr, "Summary: drive exported=%d, wiki exported=%d, unsupported=%d, errors=%d\n", p.DriveExportedCount(), p.WikiExportedCount(), p.UnsupportedCount(), p.ErrorCount())
 		fmt.Fprintln(os.Stderr, "manifest:", manifestPath)
+		fmt.Fprintln(os.Stderr, "ledger:", ledgerPath)
 		fmt.Fprintln(os.Stderr, "errors:", errorsPath)
 		return nil
 	}

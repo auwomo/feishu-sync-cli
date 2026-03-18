@@ -17,6 +17,7 @@ import (
 	"github.com/your-org/feishu-sync/internal/config"
 	"github.com/your-org/feishu-sync/internal/feishu"
 	"github.com/your-org/feishu-sync/internal/manifest"
+	"github.com/your-org/feishu-sync/internal/meta"
 )
 
 type ErrorEntry struct {
@@ -39,6 +40,7 @@ type Puller struct {
 	unsupported     int
 	errorsCountMu   sync.Mutex
 	errorsCount     int
+
 	Client *feishu.Client
 	Token  string
 	Cfg    *config.Config
@@ -51,10 +53,13 @@ type Puller struct {
 	errorsMu sync.Mutex
 	errorsW  *os.File
 
+	ledger *meta.Ledger
+	runID  string
+
 	manifest manifest.PullManifest
 }
 
-func NewPuller(client *feishu.Client, accessToken string, cfg *config.Config, outAbs string, errorsPath string) (*Puller, error) {
+func NewPuller(client *feishu.Client, accessToken string, cfg *config.Config, outAbs string, errorsPath string, ledger *meta.Ledger, runID string) (*Puller, error) {
 	if client == nil {
 		return nil, errors.New("client required")
 	}
@@ -74,7 +79,7 @@ func NewPuller(client *feishu.Client, accessToken string, cfg *config.Config, ou
 		return nil, err
 	}
 
-	p := &Puller{Client: client, Token: accessToken, Cfg: cfg, OutDir: outAbs, sem: make(chan struct{}, max(1, cfg.Runtime.Concurrency)), qps: make(chan struct{}, max(1, cfg.Runtime.RateLimitQPS)), errorsW: ew}
+	p := &Puller{Client: client, Token: accessToken, Cfg: cfg, OutDir: outAbs, sem: make(chan struct{}, max(1, cfg.Runtime.Concurrency)), qps: make(chan struct{}, max(1, cfg.Runtime.RateLimitQPS)), errorsW: ew, ledger: ledger, runID: runID}
 	if cfg.Runtime.RateLimitQPS > 0 {
 		interval := time.Second / time.Duration(max(1, cfg.Runtime.RateLimitQPS))
 		ticker := time.NewTicker(interval)
@@ -106,9 +111,19 @@ func max(a, b int) int {
 
 func (p *Puller) Close() error {
 	if p.errorsW != nil {
-		return p.errorsW.Close()
+		_ = p.errorsW.Close()
+	}
+	if p.ledger != nil {
+		_ = p.ledger.Close()
 	}
 	return nil
+}
+
+func (p *Puller) ledgerWrite(e meta.Entry) {
+	if p.ledger == nil {
+		return
+	}
+	p.ledger.Write(e)
 }
 
 func (p *Puller) logError(e ErrorEntry) {
@@ -188,8 +203,8 @@ func (s *assetSink) AddAsset(kind, token, suggestedName string) (string, error) 
 	// best-effort keep extension from suggestedName
 	rel := filepath.ToSlash(filepath.Join(filepath.Base(s.assetsDir), fname))
 
-	// download
-	if err := s.p.withLimits(func() error {
+	tmr := meta.StartTimer()
+	err := s.p.withLimits(func() error {
 		_, _, body, err := s.p.Client.DriveDownload(context.Background(), s.p.Token, token)
 		if err != nil {
 			return err
@@ -203,9 +218,13 @@ func (s *assetSink) AddAsset(kind, token, suggestedName string) (string, error) 
 		defer f.Close()
 		_, err = io.Copy(f, body)
 		return err
-	}); err != nil {
+	})
+	st, et, dur := tmr.Done()
+	if err != nil {
+		s.p.ledgerWrite(meta.Entry{RunID: s.p.runID, ResourceType: "drive", ResourceToken: token, Action: "download_asset", Status: "error", StartedAt: st, EndedAt: et, DurationMS: dur, ErrorMessage: meta.Trunc(err.Error(), 500)})
 		return "", err
 	}
+	s.p.ledgerWrite(meta.Entry{RunID: s.p.runID, ResourceType: "drive", ResourceToken: token, Action: "download_asset", Status: "ok", StartedAt: st, EndedAt: et, DurationMS: dur})
 	return rel, nil
 }
 
@@ -247,11 +266,13 @@ func (p *Puller) exportOne(ctx context.Context, it manifest.DriveItem) {
 		p.unsupported++
 		p.unsupportedMu.Unlock()
 		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "unsupported: export not implemented"})
+		p.ledgerWrite(meta.Entry{RunID: p.runID, ResourceType: "drive", ResourceToken: it.Token, Action: "export", Status: "skipped", StartedAt: meta.NowRFC3339(), EndedAt: meta.NowRFC3339(), DurationMS: 0, ErrorCode: "unsupported", ErrorMessage: "unsupported: export not implemented"})
 	default:
 		p.unsupportedMu.Lock()
 		p.unsupported++
 		p.unsupportedMu.Unlock()
 		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "unsupported type"})
+		p.ledgerWrite(meta.Entry{RunID: p.runID, ResourceType: "drive", ResourceToken: it.Token, Action: "export", Status: "skipped", StartedAt: meta.NowRFC3339(), EndedAt: meta.NowRFC3339(), DurationMS: 0, ErrorCode: "unsupported", ErrorMessage: "unsupported type"})
 	}
 }
 
@@ -259,33 +280,52 @@ func (p *Puller) exportDocx(ctx context.Context, it manifest.DriveItem) {
 	outPath, assetsDir := p.driveOutPath(it)
 	_ = os.MkdirAll(filepath.Dir(outPath), 0o755)
 
-	var blocks []feishu.DocxBlock
-	err := p.withLimits(func() error {
-		b, err := p.Client.DocxAllBlocks(ctx, p.Token, it.Token)
+	// discovery/export key path: download blocks -> render -> write
+	{
+		tmr := meta.StartTimer()
+		var blocks []feishu.DocxBlock
+		err := p.withLimits(func() error {
+			b, err := p.Client.DocxAllBlocks(ctx, p.Token, it.Token)
+			if err != nil {
+				return err
+			}
+			blocks = b
+			return nil
+		})
+		st, et, dur := tmr.Done()
 		if err != nil {
-			return err
+			p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "docx blocks: " + err.Error()})
+			p.ledgerWrite(meta.Entry{RunID: p.runID, ResourceType: "drive", ResourceToken: it.Token, Action: "download_blocks", Status: "error", StartedAt: st, EndedAt: et, DurationMS: dur, ErrorMessage: meta.Trunc(err.Error(), 500)})
+			return
 		}
-		blocks = b
-		return nil
-	})
-	if err != nil {
-		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "docx blocks: " + err.Error()})
-		return
-	}
+		p.ledgerWrite(meta.Entry{RunID: p.runID, ResourceType: "drive", ResourceToken: it.Token, Action: "download_blocks", Status: "ok", StartedAt: st, EndedAt: et, DurationMS: dur})
 
-	md, err := RenderDocxToMarkdown(it.Token, blocks, &assetSink{p: p, assetsDir: assetsDir})
-	if err != nil {
-		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "docx render: " + err.Error()})
-		return
-	}
+		// render
+		tmr2 := meta.StartTimer()
+		md, err := RenderDocxToMarkdown(it.Token, blocks, &assetSink{p: p, assetsDir: assetsDir})
+		st2, et2, dur2 := tmr2.Done()
+		if err != nil {
+			p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "docx render: " + err.Error()})
+			p.ledgerWrite(meta.Entry{RunID: p.runID, ResourceType: "drive", ResourceToken: it.Token, Action: "convert", Status: "error", StartedAt: st2, EndedAt: et2, DurationMS: dur2, ErrorMessage: meta.Trunc(err.Error(), 500)})
+			return
+		}
+		p.ledgerWrite(meta.Entry{RunID: p.runID, ResourceType: "drive", ResourceToken: it.Token, Action: "convert", Status: "ok", StartedAt: st2, EndedAt: et2, DurationMS: dur2, Bytes: int64(len(md))})
 
-	if err := os.WriteFile(outPath, []byte(md), 0o644); err != nil {
-		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "write md: " + err.Error()})
-		return
+		// write
+		tmr3 := meta.StartTimer()
+		err = os.WriteFile(outPath, []byte(md), 0o644)
+		st3, et3, dur3 := tmr3.Done()
+		if err != nil {
+			p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "write md: " + err.Error()})
+			p.ledgerWrite(meta.Entry{RunID: p.runID, ResourceType: "drive", ResourceToken: it.Token, Action: "write", Status: "error", StartedAt: st3, EndedAt: et3, DurationMS: dur3, ErrorMessage: meta.Trunc(err.Error(), 500)})
+			return
+		}
+		p.ledgerWrite(meta.Entry{RunID: p.runID, ResourceType: "drive", ResourceToken: it.Token, Action: "write", Status: "ok", StartedAt: st3, EndedAt: et3, DurationMS: dur3, Bytes: fileSize(outPath)})
+
+		p.driveExportedMu.Lock()
+		p.driveExported++
+		p.driveExportedMu.Unlock()
 	}
-	p.driveExportedMu.Lock()
-	p.driveExported++
-	p.driveExportedMu.Unlock()
 }
 
 func (p *Puller) exportDoc(ctx context.Context, it manifest.DriveItem) {
@@ -298,6 +338,9 @@ func (p *Puller) exportDoc(ctx context.Context, it manifest.DriveItem) {
 	_ = os.WriteFile(outPath, []byte(placeholder), 0o644)
 	// no API in this milestone; leave raw json empty marker
 	_ = os.WriteFile(rawPath, []byte("{}\n"), 0o644)
+
+	p.ledgerWrite(meta.Entry{RunID: p.runID, ResourceType: "drive", ResourceToken: it.Token, Action: "export", Status: "skipped", StartedAt: meta.NowRFC3339(), EndedAt: meta.NowRFC3339(), DurationMS: 0, ErrorCode: "unimplemented", ErrorMessage: "doc(v1) export not implemented"})
+	_ = ctx
 }
 
 func (p *Puller) exportFile(ctx context.Context, it manifest.DriveItem) {
@@ -309,6 +352,7 @@ func (p *Puller) exportFile(ctx context.Context, it manifest.DriveItem) {
 		outPath = outPath + ext
 	}
 
+	tmr := meta.StartTimer()
 	err := p.withLimits(func() error {
 		_, _, body, err := p.Client.DriveDownload(ctx, p.Token, it.Token)
 		if err != nil {
@@ -323,9 +367,25 @@ func (p *Puller) exportFile(ctx context.Context, it manifest.DriveItem) {
 		_, err = io.Copy(f, body)
 		return err
 	})
+	st, et, dur := tmr.Done()
 	if err != nil {
 		p.logError(ErrorEntry{Time: time.Now().Format(time.RFC3339), Scope: "drive", Token: it.Token, Type: it.Type, Path: it.Path, Name: it.Name, Reason: "file download: " + err.Error()})
+		p.ledgerWrite(meta.Entry{RunID: p.runID, ResourceType: "drive", ResourceToken: it.Token, Action: "download", Status: "error", StartedAt: st, EndedAt: et, DurationMS: dur, ErrorMessage: meta.Trunc(err.Error(), 500)})
+		return
 	}
+	p.ledgerWrite(meta.Entry{RunID: p.runID, ResourceType: "drive", ResourceToken: it.Token, Action: "download", Status: "ok", StartedAt: st, EndedAt: et, DurationMS: dur, Bytes: fileSize(outPath)})
+
+	p.driveExportedMu.Lock()
+	p.driveExported++
+	p.driveExportedMu.Unlock()
+}
+
+func fileSize(path string) int64 {
+	st, err := os.Stat(path)
+	if err != nil {
+		return 0
+	}
+	return st.Size()
 }
 
 func (p *Puller) WriteManifest(path string, m manifest.PullManifest) error {
