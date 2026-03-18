@@ -37,19 +37,27 @@ func runPull(chdir, configPath string, dryRun bool) error {
 		}
 		client := feishuNewClient()
 
+		progress := newPullProgress(os.Stderr, 5*time.Second)
+		defer progress.Close()
+		progress.SetStage("discover")
+
+		runID := meta.NewRunID()
+		run := meta.NewRun(runID, cfg)
+
+		fmt.Fprintf(os.Stderr, "%s mode=%s scope=%s run_id=%s out=%s\n", newTermStyle(os.Stderr).heading("[pull]"), newTermStyle(os.Stderr).bold("export"), newTermStyle(os.Stderr).bold(cfg.Scope.Mode), newTermStyle(os.Stderr).bold(runID), outAbs)
+
 		// Build manifest (discovery) then export.
 		m, err := buildPullManifest(ctx, ws, cfg, client, token)
 		if err != nil {
 			return err
 		}
+		progress.AddDriveDiscovered(m.Drive.Summary.ItemCount)
+		progress.AddWikiDiscovered(m.Wiki.Summary.ItemCount)
 
 		metaDir := filepath.Join(outAbs, "_meta")
 		if err := os.MkdirAll(metaDir, 0o755); err != nil {
 			return err
 		}
-
-		runID := meta.NewRunID()
-		run := meta.NewRun(runID, cfg)
 
 		ledgerPath := filepath.Join(metaDir, "ledger.jsonl")
 		led, err := meta.OpenLedger(ledgerPath, runID)
@@ -67,18 +75,25 @@ func runPull(chdir, configPath string, dryRun bool) error {
 		}
 		defer p.Close()
 
+		progress.SetStage("export")
 		// Export all discovered items.
 		if cfg.Scope.Mode == "all" || cfg.Scope.Mode == "drive" {
 			for _, folderTok := range m.Drive.Roots {
 				items := m.Drive.Folders[folderTok]
+				before := p.DriveExportedCount()
 				p.ExportDriveItems(ctx, items)
+				progress.AddDriveExported(p.DriveExportedCount() - before)
+				progress.AddErrors(p.ErrorCount())
 			}
 		}
 
 		if cfg.Scope.Mode == "all" || cfg.Scope.Mode == "wiki" {
 			for _, sp := range m.Wiki.Spaces {
 				items := m.Wiki.Items[sp.SpaceID]
+				before := p.WikiExportedCount()
 				p.ExportWikiItems(ctx, items)
+				progress.AddWikiExported(p.WikiExportedCount() - before)
+				progress.AddErrors(p.ErrorCount())
 			}
 		}
 

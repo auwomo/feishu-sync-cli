@@ -35,10 +35,24 @@ func (s termStyle) warn(t string) string {
 	return "\x1b[33m" + t + "\x1b[0m" // yellow
 }
 
+func (s termStyle) ok(t string) string {
+	if !s.color {
+		return t
+	}
+	return "\x1b[32m" + t + "\x1b[0m" // green
+}
+
 func (s termStyle) faint(t string) string {
 	if !s.color {
 		return t
 	}
 	return "\x1b[2m" + t + "\x1b[0m"
+}
+
+func (s termStyle) bold(t string) string {
+	if !s.color {
+		return t
+	}
+	return "\x1b[1m" + t + "\x1b[0m"
 }
 
