@@ -30,10 +30,18 @@ builds:
       - arm64
 
 archives:
-  - id: default
+  # Non-Windows → tar.gz
+  - id: nix
+    builds:
+      - feishu-sync
     formats:
       - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+  # Windows → zip (explicit)
   - id: windows
     builds:
       - feishu-sync
@@ -42,8 +50,6 @@ archives:
     files:
       - README.md
       - LICENSE*
-    # Only package zip for Windows.
-    # (GoReleaser picks the right archive per OS.)
 
 checksum:
   name_template: "checksums.txt"
