@@ -66,8 +66,19 @@ $release = Invoke-RestMethod -Uri $url -Headers @{"User-Agent"="feishu-sync-inst
 $arch = if ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "386" }
 if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { $arch = "arm64" }
 
-$pattern = "feishu-sync_" + ($Tag.TrimStart('v')) + "_windows_" + $arch + "\\.zip$"
-$asset = $release.assets | Where-Object { $_.browser_download_url -match $pattern } | Select-Object -First 1
+$versionNoV = $Tag
+if ($versionNoV.StartsWith('v')) { $versionNoV = $versionNoV.Substring(1) }
+
+# Match exact asset name for this version/arch, e.g.
+# feishu-sync_0.1.3_windows_amd64.zip
+$assetName = "feishu-sync_${versionNoV}_windows_${arch}.zip"
+$asset = $release.assets | Where-Object { $_.name -eq $assetName } | Select-Object -First 1
+
+# Fallback: any windows zip for this arch (useful if naming changes)
+if (-not $asset) {
+  $fallbackPattern = "windows_${arch}\\.zip$"
+  $asset = $release.assets | Where-Object { $_.browser_download_url -match $fallbackPattern } | Select-Object -First 1
+}
 
 if (-not $asset) {
   Write-Warn "Windows binaries not published yet"
