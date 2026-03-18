@@ -45,31 +45,16 @@ export FEISHU_APP_SECRET='***'
 
 > 默认 `output.dir: .`，输出会写到当前工作区根目录下。
 
-### 4)（可选）OAuth 登录（仅 user mode）
-
-本地（推荐，自动起一个本地回调监听）：
+### 4) OAuth 登录（仅 user mode）
 
 ```bash
-# 默认监听 127.0.0.1:18900/callback
-feishu-sync auth login
+feishu-sync login
 ```
 
-远程/手动（推荐在服务器上用；需要你在开放平台里配置一个 **whitelisted redirect_uri**）：
-
-```bash
-feishu-sync auth login --remote --redirect-uri <WHITELISTED_REDIRECT_URI>
-```
-
-（调试用：加 `--verbose` 可以打印 redirect_uri 等更详细的参数）
-
-运行后会打印授权 URL。完成授权后：
-
-- 授权完成后浏览器可能会显示 **404/空白页** —— 这是正常的。
-- 请从地址栏复制 **完整 URL**（必须包含 `code=` 和 `state=`），然后粘贴回终端。
-
-注意：
-- 如果你粘贴的是完整 URL，则必须包含并匹配 `state`（用于防止 CSRF）。
-- 如果你只粘贴 raw code（不含 state），会给出警告并继续（无法校验 state）。
+- 会打印一条 **Authorize URL**。
+- 本地会自动打开浏览器并等待回调。
+- 如果你在另一台机器完成登录（比如服务器场景），登录后页面可能显示 **404/空白页** —— 这是正常的。
+  把浏览器地址栏的 **完整 URL**（包含 `code=` 和 `state=`）复制出来，粘贴回终端即可完成登录。
 
 ### 5) 拉取备份
 
@@ -131,9 +116,9 @@ runtime:
   - 初始化 `./.feishu-sync/`，写入 `config.yaml`（默认 `output.dir: .`）
 - `feishu-sync secret set` / `feishu-sync secret show`
   - 管理 app secret（优先级：`secret_env` > `secret_file`）
-- `feishu-sync auth login`
+- `feishu-sync login`
   - OAuth 登录（仅 `auth.mode: user` 需要）
-  - 默认参数：`--host 127.0.0.1 --port 18900 --callback-path /callback`
+  - 默认回调：`http://127.0.0.1:18900/callback`
 - `feishu-sync drive roots`
   - tenant 模式下给出“如何获取 folder token”的说明
 - `feishu-sync drive ls --folder <folder_token> --depth 2`
@@ -178,12 +163,12 @@ runtime:
 解决：
 
 - 在 Feishu 开放平台应用设置里添加上述 URL
-- 或使用 `feishu-sync auth login --host ... --port ... --callback-path ...` 并把对应的 URL 加到后台
+- 确认应用后台已添加重定向地址：`http://127.0.0.1:18900/callback`
 
 ### 2) `token missing` / `workspace not found`
 
 - `workspace not found (no .feishu-sync in parents)`：你不在工作区内运行，先 `feishu-sync init`。
-- user mode 下如果未登录：先 `feishu-sync auth login` 生成 `./.feishu-sync/token.json`。
+- user mode 下如果未登录：先 `feishu-sync login` 生成 `./.feishu-sync/token.json`。
 
 ### 3) Wiki 404 / 找不到节点
 
@@ -222,12 +207,12 @@ wiki/
 
 ---
 
-## Remote auth ideas (设计草案，暂未实现)
+## Remote auth ideas (设计草案)
 
 当你在服务器上跑 `feishu-sync`，但需要在本机完成登录授权时，可以考虑两种思路：
 
 1) **Public callback URL 模式**
-   - 服务端：`feishu-sync auth login --listen 0.0.0.0 --port ...` 并提供 `--public-url https://.../callback`
+   - 服务端：暴露一个公网可访问的回调 URL（例如反向代理到你的回调服务）
    - 将 `redirect_uri` 指向公网可访问的回调 URL（可能需要反向代理 / TLS）
    - 风险：回调暴露在公网，必须有 state 校验、短超时、最小暴露面
 

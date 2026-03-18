@@ -20,11 +20,10 @@ func Run(args []string) int {
 		fs.SetOutput(os.Stderr)
 		chdir := fs.String("C", "", "initialize workspace in this directory")
 		force := fs.Bool("force", false, "overwrite existing .feishu-sync directory")
-		out := fs.String("out", ".", "default output directory (relative to workspace root)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}
-		if err := runInit(*chdir, *force, *out); err != nil {
+		if err := runInit(*chdir, *force, "."); err != nil {
 			fmt.Fprintln(os.Stderr, "FAIL:", err)
 			return 1
 		}
@@ -74,13 +73,12 @@ func Run(args []string) int {
 		chdir := fs.String("C", "", "run as if started in this directory")
 		configPath := fs.String("c", "", "explicit config file path (advanced)")
 		noBrowser := fs.Bool("no-browser", false, "do not auto-open the browser")
-		redirectURI := fs.String("redirect-uri", "", "override redirect_uri for manual flow (must be whitelisted in Feishu app)")
 		verbose := fs.Bool("verbose", false, "verbose output")
 		timeout := fs.Duration("timeout", 2*time.Minute, "timeout for local callback flow")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}
-		if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{NoBrowser: *noBrowser, RedirectURI: *redirectURI, Verbose: *verbose, Timeout: *timeout}, os.Stdout, os.Stderr); err != nil {
+		if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{NoBrowser: *noBrowser, Verbose: *verbose, Timeout: *timeout}, os.Stdout, os.Stderr); err != nil {
 			fmt.Fprintln(os.Stderr, "FAIL:", err)
 			return 1
 		}
@@ -88,35 +86,14 @@ func Run(args []string) int {
 		return 0
 
 	case "auth":
-		fs := flag.NewFlagSet("auth", flag.ContinueOnError)
-		fs.SetOutput(os.Stderr)
-		chdir := fs.String("C", "", "run as if started in this directory")
-		configPath := fs.String("c", "", "explicit config file path (advanced)")
-		noBrowser := fs.Bool("no-browser", false, "do not auto-open the browser")
-		// remote := fs.Bool("remote", false, "remote/manual auth flow (no local callback server)")
-		// manual := fs.Bool("manual", false, "alias for --remote")
-		redirectURI := fs.String("redirect-uri", "", "override redirect_uri for remote/manual mode (must be whitelisted in Feishu app)")
-		verbose := fs.Bool("verbose", false, "verbose output (show redirect_uri details, etc)")
-		if err := fs.Parse(args[1:]); err != nil {
+		// Deprecated. Kept only to provide a clear migration hint.
+		if len(args) >= 2 && args[1] == "login" {
+			fmt.Fprintln(os.Stderr, "已移除，请用 feishu-sync login")
 			return 2
 		}
-		if fs.NArg() < 1 {
-			fmt.Fprintln(os.Stderr, "auth requires subcommand: login")
-			return 2
-		}
-		sub := fs.Arg(0)
-		switch sub {
-		case "login":
-			if err := runAuthLogin(context.Background(), *chdir, *configPath, authLoginOptions{NoBrowser: *noBrowser, RedirectURI: *redirectURI, Verbose: *verbose}, os.Stdout, os.Stderr); err != nil {
-				fmt.Fprintln(os.Stderr, "FAIL:", err)
-				return 1
-			}
-			fmt.Fprintln(os.Stdout, "OK")
-			return 0
-		default:
-			fmt.Fprintln(os.Stderr, "unknown auth subcommand:", sub)
-			return 2
-		}
+		fmt.Fprintln(os.Stderr, "unknown command: auth")
+		usage()
+		return 2
 
 	case "pull":
 		fs := flag.NewFlagSet("pull", flag.ContinueOnError)
@@ -227,7 +204,7 @@ func Run(args []string) int {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "feishu-sync <command> [args]")
-	fmt.Fprintln(os.Stderr, "commands: init, secret, login, auth, pull, drive, wiki, validate")
+	fmt.Fprintln(os.Stderr, "commands: init, secret, login, pull, drive, wiki, validate")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "drive subcommands: roots, ls")
 	fmt.Fprintln(os.Stderr, "wiki subcommands: ls")
