@@ -1,10 +1,17 @@
 package cli
 
-import (	"os"
+import (
+	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/your-org/feishu-sync/internal/workspace"
 )
+
+type initOptions struct {
+	AppID string
+}
 
 const configTemplate = `app:
   id: cli_xxx
@@ -28,7 +35,7 @@ runtime:
   incremental: true
 `
 
-func runInit(chdir string, force bool, out string) error {
+func runInit(chdir string, force bool, opt initOptions) error {
 	start := ""
 	if chdir != "" {
 		start = chdir
@@ -44,17 +51,14 @@ func runInit(chdir string, force bool, out string) error {
 	if err != nil {
 		return err
 	}
-	ws := workspace.Workspace{Root: abs}
-	return ws.Init(force, configTemplate)
-}
 
-func ensureDir(path string) error {
-	return os.MkdirAll(path, 0o755)
-}
-
-func writeFile(path, content string, perm os.FileMode) error {
-	if err := ensureDir(filepath.Dir(path)); err != nil {
-		return err
+	tpl := configTemplate
+	if opt.AppID != "" {
+		// Replace the placeholder "cli_xxx" in the template.
+		// Keep it simple and explicit: users may still edit config.yaml manually later.
+		tpl = strings.Replace(tpl, "id: cli_xxx", fmt.Sprintf("id: %s", opt.AppID), 1)
 	}
-	return os.WriteFile(path, []byte(content), perm)
+
+	ws := workspace.Workspace{Root: abs}
+	return ws.Init(force, tpl)
 }

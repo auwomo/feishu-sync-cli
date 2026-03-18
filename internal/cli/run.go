@@ -20,10 +20,11 @@ func Run(args []string) int {
 		fs.SetOutput(os.Stderr)
 		chdir := fs.String("C", "", "initialize workspace in this directory")
 		force := fs.Bool("force", false, "overwrite existing .feishu-sync directory")
+		appID := fs.String("app-id", "", "set app.id in generated config.yaml (e.g. cli_xxx)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}
-		if err := runInit(*chdir, *force, "."); err != nil {
+		if err := runInit(*chdir, *force, initOptions{AppID: *appID}); err != nil {
 			fmt.Fprintln(os.Stderr, "FAIL:", err)
 			return 1
 		}
@@ -40,6 +41,7 @@ func Run(args []string) int {
 		fs.SetOutput(os.Stderr)
 		chdir := fs.String("C", "", "run as if started in this directory")
 		reveal := fs.Bool("reveal", false, "print the secret value (unsafe)")
+		setValue := fs.String("value", "", "secret value for 'secret set' (unsafe; prefer stdin)")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}
@@ -50,7 +52,7 @@ func Run(args []string) int {
 		sub := fs.Arg(0)
 		switch sub {
 		case "set":
-			if err := runSecretSet(*chdir, os.Stdin); err != nil {
+			if err := runSecretSet(*chdir, *setValue, os.Stdin); err != nil {
 				fmt.Fprintln(os.Stderr, "FAIL:", err)
 				return 1
 			}

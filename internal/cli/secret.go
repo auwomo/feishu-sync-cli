@@ -13,7 +13,7 @@ import (
 	"github.com/your-org/feishu-sync/internal/workspace"
 )
 
-func runSecretSet(chdir string, in io.Reader) error {
+func runSecretSet(chdir string, value string, in io.Reader) error {
 	ws, cfg, err := loadWorkspaceAndConfig(chdir, "")
 	if err != nil {
 		return err
@@ -24,13 +24,16 @@ func runSecretSet(chdir string, in io.Reader) error {
 		return err
 	}
 
-	b, err := io.ReadAll(in)
-	if err != nil {
-		return err
-	}
-	secret := strings.TrimSpace(string(b))
+	secret := strings.TrimSpace(value)
 	if secret == "" {
-		return errors.New("secret is empty; pipe/paste secret into stdin")
+		b, err := io.ReadAll(in)
+		if err != nil {
+			return err
+		}
+		secret = strings.TrimSpace(string(b))
+	}
+	if secret == "" {
+		return errors.New("secret is empty; pass --value or pipe/paste secret into stdin")
 	}
 
 	if err := os.MkdirAll(filepath.Dir(secretPath), 0o755); err != nil {
