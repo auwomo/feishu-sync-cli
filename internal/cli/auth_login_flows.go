@@ -13,13 +13,10 @@ import (
 )
 
 // netListen is overridden in tests.
-var netListen = net.Listen
-
-// listener is the minimal interface we need from net.Listener.
-type listener interface {
-	Close() error
-	Addr() net.Addr
+var netListen = func(network, address string) (net.Listener, error) {
+	return net.Listen(network, address)
 }
+
 
 func tryManualAuth(ctx context.Context, out ioWriter, expectedState string) (string, error) {
 
@@ -77,7 +74,7 @@ func tryLocalAuth(ctx context.Context, out ioWriter, authURL string, expectedSta
 
 	srv := &http.Server{Handler: mux}
 	go func() {
-		_ = srv.Serve(ln.(net.Listener))
+		_ = srv.Serve(ln)
 	}()
 
 	if !noBrowser {
