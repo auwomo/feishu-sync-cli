@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -22,7 +21,7 @@ func runConfigWizard(chdir, configPath string, in io.Reader, out, errOut io.Writ
 
 	// app id
 	fmt.Fprint(errOut, "App ID (e.g. cli_xxx): ")
-	appID, err := readLine(in)
+	appID, err := readLineFrom(in)
 	if err != nil {
 		return err
 	}
@@ -43,7 +42,7 @@ func runConfigWizard(chdir, configPath string, in io.Reader, out, errOut io.Writ
 		secret = strings.TrimSpace(string(b))
 	} else {
 		fmt.Fprintln(errOut, "App Secret: (reading from stdin; input may be echoed)")
-		v, err := readLine(in)
+		v, err := readLineFrom(in)
 		if err != nil {
 			return err
 		}
@@ -83,18 +82,6 @@ func runConfigWizard(chdir, configPath string, in io.Reader, out, errOut io.Writ
 	return nil
 }
 
-func readLine(r io.Reader) (string, error) {
-	br := bufio.NewReader(r)
-	line, err := br.ReadString('\n')
-	if err == io.EOF {
-		return strings.TrimRight(line, "\r\n"), nil
-	}
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimRight(line, "\r\n"), nil
-}
-
 func writeConfigYAML(path string, cfg *config.Config) error {
 	b, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -111,7 +98,3 @@ func readPassword(f *os.File) ([]byte, error) {
 	return readPasswordFromFD(int(f.Fd()))
 }
 
-// implemented in password.go
-func readPasswordFromFD(fd int) ([]byte, error)
-
-// ensure imported packages are used

@@ -2,10 +2,10 @@ package cli
 
 import (
 	"context"
-	"time"
 	"flag"
 	"fmt"
 	"os"
+	"time"
 )
 
 func Run(args []string) int {
@@ -50,35 +50,6 @@ func Run(args []string) int {
 		}
 		return 0
 
-	case "secret":
-		fs := flag.NewFlagSet("secret", flag.ContinueOnError)
-		fs.SetOutput(os.Stderr)
-		chdir := fs.String("C", "", "run as if started in this directory")
-		reveal := fs.Bool("reveal", false, "print the secret value (unsafe)")
-		if err := fs.Parse(args[1:]); err != nil {
-			return 2
-		}
-		if fs.NArg() < 1 {
-			fmt.Fprintln(os.Stderr, "secret requires subcommand: set | show")
-			return 2
-		}
-		sub := fs.Arg(0)
-		switch sub {
-		case "set":
-			// Deprecated. Kept only to provide a clear migration hint.
-			fmt.Fprintln(os.Stderr, "已移除，请用 feishu-sync config")
-			return 2
-		case "show":
-			if err := runSecretShow(*chdir, *reveal, os.Stdout); err != nil {
-				fmt.Fprintln(os.Stderr, "FAIL:", err)
-				return 1
-			}
-			return 0
-		default:
-			fmt.Fprintln(os.Stderr, "unknown secret subcommand:", sub)
-			return 2
-		}
-
 	case "login":
 		fs := flag.NewFlagSet("login", flag.ContinueOnError)
 		fs.SetOutput(os.Stderr)
@@ -96,16 +67,6 @@ func Run(args []string) int {
 		}
 		fmt.Fprintln(os.Stdout, "OK")
 		return 0
-
-	case "auth":
-		// Deprecated. Kept only to provide a clear migration hint.
-		if len(args) >= 2 && args[1] == "login" {
-			fmt.Fprintln(os.Stderr, "已移除，请用 feishu-sync login")
-			return 2
-		}
-		fmt.Fprintln(os.Stderr, "unknown command: auth")
-		usage()
-		return 2
 
 	case "pull":
 		fs := flag.NewFlagSet("pull", flag.ContinueOnError)
@@ -216,7 +177,7 @@ func Run(args []string) int {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "feishu-sync <command> [args]")
-	fmt.Fprintln(os.Stderr, "commands: init, config, secret, login, pull, drive, wiki, validate")
+	fmt.Fprintln(os.Stderr, "commands: init, config, login, pull, drive, wiki, validate")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "drive subcommands: roots, ls")
 	fmt.Fprintln(os.Stderr, "wiki subcommands: ls")
