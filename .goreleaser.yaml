@@ -30,26 +30,19 @@ builds:
       - arm64
 
 archives:
-  # Non-Windows → tar.gz
-  - id: nix
+  - id: archives
     builds:
       - feishu-sync
+    # Default format for all platforms
     formats:
       - tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # Windows must be zip
     format_overrides:
       - goos: windows
         format: zip
-
-  # Windows → zip (explicit)
-  - id: windows
-    builds:
-      - feishu-sync
-    format: zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - README.md
-      - LICENSE*
 
 checksum:
   name_template: "checksums.txt"
