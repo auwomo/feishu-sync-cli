@@ -1,0 +1,52 @@
+# GoReleaser config for feishu-sync
+# Minimal setup: builds for macOS/Linux, amd64/arm64, publishes GitHub Releases.
+
+version: 2
+
+project_name: feishu-sync
+
+before:
+  hooks:
+    - go mod tidy
+
+env:
+  - CGO_ENABLED=0
+
+builds:
+  - id: feishu-sync
+    main: ./cmd/feishu-sync
+    binary: feishu-sync
+    ldflags:
+      - -s -w
+      - -X github.com/your-org/feishu-sync/internal/meta.Version={{.Version}}
+      - -X github.com/your-org/feishu-sync/internal/meta.Commit={{.Commit}}
+      - -X github.com/your-org/feishu-sync/internal/meta.Date={{.Date}}
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+
+release:
+  github:
+    owner: auwomo
+    name: feishu-sync-cli

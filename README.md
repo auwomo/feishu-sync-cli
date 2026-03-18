@@ -2,7 +2,24 @@
 
 A minimal, git-like CLI to back up Feishu (Lark) docs (Drive + Wiki) to local files.
 
-> Install: **TODO** (for now, build from source).
+## Install
+
+### Option A: GitHub Releases (recommended)
+
+Download the correct binary for your OS/arch from:
+
+https://github.com/auwomo/feishu-sync-cli/releases
+
+Put it on your PATH as `feishu-sync`.
+
+### Option B: Build from source
+
+```bash
+git clone https://github.com/auwomo/feishu-sync-cli.git
+cd feishu-sync-cli
+go build -o ./bin/feishu-sync ./cmd/feishu-sync
+./bin/feishu-sync --help
+```
 
 ## 最短路径 (Quickstart)
 

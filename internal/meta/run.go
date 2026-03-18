@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"os"
 	"time"
 
 	"github.com/your-org/feishu-sync/internal/config"
@@ -109,8 +108,8 @@ func NewRun(runID string, cfg *config.Config) *Run {
 	r := &Run{RunID: runID, StartedAt: time.Now(), Mode: cfg.Scope.Mode}
 	r.Scope = RunScope{DriveFolderTokens: append([]string(nil), cfg.Scope.DriveFolderTokens...), WikiSpaceIDs: append([]string(nil), cfg.Scope.WikiSpaceIDs...)}
 	r.ConfigFingerprint = FingerprintConfig(cfg)
-	r.Version = os.Getenv("FEISHU_SYNC_VERSION")
-	r.Commit = os.Getenv("FEISHU_SYNC_COMMIT")
+	r.Version = Version
+	r.Commit = Commit
 	return r
 }
 
