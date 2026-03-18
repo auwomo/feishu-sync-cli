@@ -62,7 +62,12 @@ Write-Info "install dir: $InstallDir"
 # If not found, print friendly message.
 $url = "https://api.github.com/repos/$Repo/releases/tags/$Tag"
 $release = Invoke-RestMethod -Uri $url -Headers @{"User-Agent"="feishu-sync-install"}
-$asset = $release.assets | Where-Object { $_.browser_download_url -match "windows" } | Select-Object -First 1
+# Prefer a windows zip matching this arch.
+$arch = if ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "386" }
+if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { $arch = "arm64" }
+
+$pattern = "feishu-sync_" + ($Tag.TrimStart('v')) + "_windows_" + $arch + "\\.zip$"
+$asset = $release.assets | Where-Object { $_.browser_download_url -match $pattern } | Select-Object -First 1
 
 if (-not $asset) {
   Write-Warn "Windows binaries not published yet"

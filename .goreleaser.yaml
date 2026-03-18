@@ -24,16 +24,26 @@ builds:
     goos:
       - darwin
       - linux
+      - windows
     goarch:
       - amd64
       - arm64
 
 archives:
-  - format: tar.gz
+  - id: default
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - id: windows
+    builds:
+      - feishu-sync
+    format: zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - README.md
       - LICENSE*
+    # Only package zip for Windows.
+    # (GoReleaser picks the right archive per OS.)
 
 checksum:
   name_template: "checksums.txt"
