@@ -48,16 +48,41 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 
 	printAuthLoginOptions(out, opts, authURL, effectiveRedirectURI, localRedirectURI)
 
-	// Start local callback flow (it will open the browser unless --no-browser).
-	// Users who cannot receive the callback (e.g. server) can paste the callback URL as a fallback.
-	code, err := tryLocalAuth(ctx, out, authURL, state, opts.NoBrowser, opts.Timeout)
-	if err != nil {
-		// If local callback cannot be used, allow manual paste as a fallback.
-		code2, err2 := tryManualAuth(ctx, out, state)
-		if err2 != nil {
+	// Run local callback + manual paste in parallel (first one wins).
+	codeCh := make(chan string, 1)
+	errCh := make(chan error, 1)
+
+	ctx2, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	go func() {
+		code, err := tryLocalAuth(ctx2, out, authURL, state, opts.NoBrowser, opts.Timeout)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		codeCh <- code
+	}()
+
+	go func() {
+		code, err := tryManualAuth(ctx2, out, state)
+		if err != nil {
+			// user skipped / canceled — ignore
+			return
+		}
+		codeCh <- code
+	}()
+
+	var code string
+	select {
+	case code = <-codeCh:
+		cancel()
+	case err := <-errCh:
+		// local flow failed fast (e.g. cannot listen). fall back to manual paste only.
+		code, err = tryManualAuth(ctx, out, state)
+		if err != nil {
 			return err
 		}
-		code = code2
 	}
 
 	client := feishuNewClient()

@@ -22,10 +22,6 @@ type listener interface {
 }
 
 func tryManualAuth(ctx context.Context, out ioWriter, expectedState string) (string, error) {
-	sty := newTermStyle(out)
-	fmt.Fprintln(out, sty.heading("Paste callback URL (optional)"))
-	fmt.Fprintln(out, "If you used remote/manual login: paste the FULL callback URL here (?code=...&state=...).")
-	fmt.Fprintln(out, sty.faint("Leave empty and press Enter to use local auto flow."))
 
 	input, err := readLine(ctx, "")
 	if err != nil {
@@ -84,14 +80,8 @@ func tryLocalAuth(ctx context.Context, out ioWriter, authURL string, expectedSta
 		_ = srv.Serve(ln.(net.Listener))
 	}()
 
-	sty := newTermStyle(out)
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, sty.heading("Option 1: Local (auto)"))
-	fmt.Fprintln(out, "Waiting for callback on http://127.0.0.1:18900/callback ...")
-	fmt.Fprintln(out, "Authorize URL:")
-	fmt.Fprintln(out, authURL)
 	if !noBrowser {
-		_ = openBrowser(authURL)
+		go func() { _ = openBrowser(authURL) }()
 	}
 
 	if timeout <= 0 {
