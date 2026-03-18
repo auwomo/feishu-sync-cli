@@ -48,14 +48,16 @@ func runAuthLogin(ctx context.Context, chdir, configPath string, opts authLoginO
 
 	printAuthLoginOptions(out, opts, authURL, effectiveRedirectURI, localRedirectURI)
 
-	// Offer manual flow first (user can paste immediately). Empty input skips.
-	code, err := tryManualAuth(ctx, out, state)
-	if err != nil || code == "" {
-		// Fall back to local callback flow.
-		code, err = tryLocalAuth(ctx, out, authURL, state, opts.NoBrowser, opts.Timeout)
-		if err != nil {
+	// Start local callback flow (it will open the browser unless --no-browser).
+	// Users who cannot receive the callback (e.g. server) can paste the callback URL as a fallback.
+	code, err := tryLocalAuth(ctx, out, authURL, state, opts.NoBrowser, opts.Timeout)
+	if err != nil {
+		// If local callback cannot be used, allow manual paste as a fallback.
+		code2, err2 := tryManualAuth(ctx, out, state)
+		if err2 != nil {
 			return err
 		}
+		code = code2
 	}
 
 	client := feishuNewClient()

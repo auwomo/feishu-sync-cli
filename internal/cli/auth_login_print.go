@@ -10,22 +10,18 @@ func printAuthLoginOptions(out io.Writer, opts authLoginOptions, authURL string,
 
 	fmt.Fprintln(out, st.heading("Login"))
 	fmt.Fprintln(out)
-	fmt.Fprintln(out, "This command supports two ways to authorize. Use whichever is easier:")
-	fmt.Fprintln(out)
 
-	fmt.Fprintln(out, st.heading("Option 1: Local (auto, recommended)"))
-	fmt.Fprintln(out, "- Starts a local callback server and opens your browser")
-	fmt.Fprintln(out, "- Callback:", localRedirectURI)
-	fmt.Fprintln(out)
-
-	fmt.Fprintln(out, st.heading("Option 2: Remote/manual"))
-	fmt.Fprintln(out, "- Use the SAME authorize URL in any browser")
-	fmt.Fprintln(out, "- After login it may redirect to 404/blank (normal)")
-	fmt.Fprintln(out, "- Copy the FULL URL from the address bar and paste it back here (must include state)")
+	fmt.Fprintln(out, st.heading("Authorize URL"))
+	fmt.Fprintln(out, st.faint(authURL))
 	if opts.Verbose {
-		fmt.Fprintln(out, st.faint("authorize url:"))
-		fmt.Fprintln(out, st.faint(authURL))
-		fmt.Fprintln(out, st.faint("effective redirect_uri: "+effectiveRedirectURI))
+		fmt.Fprintln(out, st.faint("redirect_uri: "+effectiveRedirectURI))
 	}
+	fmt.Fprintln(out)
+
+	fmt.Fprintln(out, st.heading("How to use"))
+	fmt.Fprintln(out, "1) Local (recommended): we will open the URL and wait for the callback.")
+	fmt.Fprintln(out, st.faint("   callback: "+localRedirectURI))
+	fmt.Fprintln(out, "2) Remote/manual: open the same URL on another machine.")
+	fmt.Fprintln(out, st.faint("   after login it may show 404/blank — ")+st.warn("this is normal")+st.faint(". Copy the FULL URL and paste it back (must include state)."))
 	fmt.Fprintln(out)
 }

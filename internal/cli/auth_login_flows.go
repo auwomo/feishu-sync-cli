@@ -23,13 +23,9 @@ type listener interface {
 
 func tryManualAuth(ctx context.Context, out ioWriter, expectedState string) (string, error) {
 	sty := newTermStyle(out)
-	fmt.Fprintln(out, sty.heading("Option 2: Remote/manual"))
-	fmt.Fprintln(out, "1) Open the authorize URL in ANY browser")
-	fmt.Fprintln(out, "2) After login, it will redirect to a page that may show 404/blank (normal)")
-	fmt.Fprintln(out, "3) Copy the FULL URL from the address bar and paste it here")
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "Paste callback URL (?code=...&state=...) and press Enter.")
-	fmt.Fprintln(out, sty.faint("Leave empty and press Enter to use the local auto flow."))
+	fmt.Fprintln(out, sty.heading("Paste callback URL (optional)"))
+	fmt.Fprintln(out, "If you used remote/manual login: paste the FULL callback URL here (?code=...&state=...).")
+	fmt.Fprintln(out, sty.faint("Leave empty and press Enter to use local auto flow."))
 
 	input, err := readLine(ctx, "")
 	if err != nil {
